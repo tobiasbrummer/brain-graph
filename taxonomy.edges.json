@@ -1,0 +1,1394 @@
+[
+  {
+    "from": "3d_druck",
+    "to": "hardware_und_smart_home",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "abfallmanagement",
+    "to": "makerspace_und_diy",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "abfallmanagement",
+    "to": "reinigung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "aktivitaeten_und_sehenswuerdigkeiten",
+    "to": "fotografie_und_videografie",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "aktivitaeten_und_sehenswuerdigkeiten",
+    "to": "kultur_und_gesellschaft",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "arbeitsorganisation",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "berufliche_weiterentwicklung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "finanzen_und_investitionen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "jobsuchen_und_bewerbungen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "arbeit_und_karriere",
+    "to": "produktivitaet",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "arbeitsorganisation",
+    "to": "aufgabenverwaltung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "arbeitsorganisation",
+    "to": "zeitmanagement",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "arzt_und_vorsorge",
+    "to": "versicherungen",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "aufgabenverwaltung",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "aufgabenverwaltung",
+    "to": "organisation",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "bankangelegenheiten",
+    "to": "finanzen_und_investitionen",
+    "type": "related",
+    "weight": 9
+  },
+  {
+    "from": "bash_shell_scripting",
+    "to": "linux",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "bash_shell_scripting",
+    "to": "makerspace_und_diy",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "bankangelegenheiten",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "finanzen_und_investitionen",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "kommunikation_mit_behoerden",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "termine_und_fristen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "behoerden_und_verwaltung",
+    "to": "versicherungen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "berufliche_weiterentwicklung",
+    "to": "online_kurse_und_ressourcen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "berufliche_weiterentwicklung",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "betriebssysteme",
+    "to": "linux",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "betriebssysteme",
+    "to": "linux",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "betriebssysteme",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "budgetierung",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "budgetierung",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "cybersecurity",
+    "to": "behoerden_und_verwaltung",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "cybersecurity",
+    "to": "linux",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "diaeten",
+    "to": "budgetierung",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "elternsein",
+    "to": "kindererziehung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "elternsein",
+    "to": "kindergarten_und_schule",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "elternsein",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "energieeffizienz",
+    "to": "budgetierung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "energieeffizienz",
+    "to": "hardware_und_smart_home",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "ernaehrung",
+    "to": "diaeten",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "ernaehrung",
+    "to": "ernaehrungswissenschaft",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "ernaehrung",
+    "to": "kochen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "ernaehrung",
+    "to": "nachhaltiger_lebensstil",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "ernaehrungswissenschaft",
+    "to": "lernen_und_bildung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "elternsein",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "familienmanagement",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "gesundheit",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "partnerschaft",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "familie_und_beziehungen",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "familienmanagement",
+    "to": "aufgabenverwaltung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "familienmanagement",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "familienmanagement",
+    "to": "reiseplanung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "bankangelegenheiten",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "budgetierung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "schuldenmanagement",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "sparen_und_investieren",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "finanzen_und_investitionen",
+    "to": "steuern",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "fokus_und_konzentration",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "fokus_und_konzentration",
+    "to": "mentale_gesundheit",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "fotografie_und_videografie",
+    "to": "aktivitaeten_und_sehenswuerdigkeiten",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "fotografie_und_videografie",
+    "to": "kunst_und_handwerk",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "freiwilligenarbeit",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "freiwilligenarbeit",
+    "to": "soziale_themen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "gesundheit",
+    "to": "arzt_und_vorsorge",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "gesundheit",
+    "to": "ernaehrung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "gesundheit",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "gesundheit",
+    "to": "mentale_gesundheit",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "gesundheit",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "gesundheit",
+    "to": "schlaf",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "gesundheit",
+    "to": "sport",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "git_und_versionierung",
+    "to": "berufliche_weiterentwicklung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "hardware_und_smart_home",
+    "to": "energieeffizienz",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "hardware_und_smart_home",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "haushalt",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "haushalt",
+    "to": "organisation",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "haushalt",
+    "to": "produktivitaet",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "haushalt",
+    "to": "reinigung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "haushalt",
+    "to": "umwelt_und_nachhaltigkeit",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "haushalt",
+    "to": "wartung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "internationale_beziehungen",
+    "to": "soziale_themen",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "javascript",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "javascript",
+    "to": "typescript",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "jobsuchen_und_bewerbungen",
+    "to": "netzwerken",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "jobsuchen_und_bewerbungen",
+    "to": "zielsetzung_und_motivation",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "kindererziehung",
+    "to": "mentale_gesundheit",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kindererziehung",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "kindergarten_und_schule",
+    "to": "behoerden_und_verwaltung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kindergarten_und_schule",
+    "to": "lernen_und_bildung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "kochen",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "kochen",
+    "to": "nachhaltiger_lebensstil",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kommunikation_mit_behoerden",
+    "to": "schreiben",
+    "type": "related",
+    "weight": 2
+  },
+  {
+    "from": "kommunikation_mit_behoerden",
+    "to": "versicherungen",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "fotografie_und_videografie",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "kunst_und_handwerk",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "makerspace_und_diy",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "musik",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "schreiben",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kreativitaet_und_hobbys",
+    "to": "technologie_und_programmierung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "kultur_und_gesellschaft",
+    "to": "aktivitaeten_und_sehenswuerdigkeiten",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kultur_und_gesellschaft",
+    "to": "internationale_beziehungen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kultur_und_gesellschaft",
+    "to": "kunst_und_kulturgeschichte",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kultur_und_gesellschaft",
+    "to": "soziale_themen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "kultur_und_gesellschaft",
+    "to": "soziales_und_gemeinschaft",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "kunst_und_handwerk",
+    "to": "kunst_und_kulturgeschichte",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "kunst_und_kulturgeschichte",
+    "to": "fotografie_und_videografie",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "kunst_und_kulturgeschichte",
+    "to": "kunst_und_handwerk",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "kindergarten_und_schule",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "online_kurse_und_ressourcen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "studientechniken",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "technologie_und_programmierung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "lernen_und_bildung",
+    "to": "wissensverwaltung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "linux",
+    "to": "wissensverwaltung",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "makerspace_und_diy",
+    "to": "3d_druck",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "makerspace_und_diy",
+    "to": "abfallmanagement",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "makerspace_und_diy",
+    "to": "bash_shell_scripting",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "makerspace_und_diy",
+    "to": "hardware_und_smart_home",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "makerspace_und_diy",
+    "to": "mechanische_tastaturen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "mechanische_tastaturen",
+    "to": "hardware_und_smart_home",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "mechanische_tastaturen",
+    "to": "programmiersprachen",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "mentale_gesundheit",
+    "to": "persoenliche_entwicklung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "mentale_gesundheit",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "mentale_gesundheit",
+    "to": "stressmanagement",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "musik",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "musik",
+    "to": "veranstaltungen_und_treffen",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "nachhaltiger_lebensstil",
+    "to": "ernaehrung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "nachhaltiger_lebensstil",
+    "to": "sparen_und_investieren",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "netzwerken",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "netzwerken",
+    "to": "soziale_faehigkeiten",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "online_kurse_und_ressourcen",
+    "to": "berufliche_weiterentwicklung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "online_kurse_und_ressourcen",
+    "to": "technologie_und_programmierung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "organisation",
+    "to": "aufgabenverwaltung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "organisation",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "partnerschaft",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "partnerschaft",
+    "to": "soziale_faehigkeiten",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "mentale_gesundheit",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "selbstreflexion",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "soziale_faehigkeiten",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "persoenliche_entwicklung",
+    "to": "zielsetzung_und_motivation",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "produktivitaet",
+    "to": "arbeitsorganisation",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "produktivitaet",
+    "to": "aufgabenverwaltung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "produktivitaet",
+    "to": "fokus_und_konzentration",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "produktivitaet",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "produktivitaet",
+    "to": "wissensverwaltung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "produktivitaet",
+    "to": "zeitmanagement",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "bash_shell_scripting",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "berufliche_weiterentwicklung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "javascript",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "python",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "studientechniken",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "programmiersprachen",
+    "to": "typescript",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "python",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "reinigung",
+    "to": "abfallmanagement",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "aktivitaeten_und_sehenswuerdigkeiten",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "fotografie_und_videografie",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "reiseplanung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "sport",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "reisen_und_freizeit",
+    "to": "unterkuenfte_und_transport",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "reiseplanung",
+    "to": "budgetierung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "reiseplanung",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "schlaf",
+    "to": "fokus_und_konzentration",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "schlaf",
+    "to": "mentale_gesundheit",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "schreiben",
+    "to": "kultur_und_gesellschaft",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "schreiben",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "schuldenmanagement",
+    "to": "behoerden_und_verwaltung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "selbstreflexion",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "selbstreflexion",
+    "to": "mentale_gesundheit",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "selbstreflexion",
+    "to": "schreiben",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "softwareentwicklung",
+    "to": "berufliche_weiterentwicklung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "softwareentwicklung",
+    "to": "git_und_versionierung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "softwareentwicklung",
+    "to": "produktivitaet",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "soziale_faehigkeiten",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "soziale_faehigkeiten",
+    "to": "soziales_und_gemeinschaft",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "soziale_themen",
+    "to": "freiwilligenarbeit",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "soziale_themen",
+    "to": "soziale_faehigkeiten",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "freiwilligenarbeit",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "kultur_und_gesellschaft",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "netzwerken",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "soziale_faehigkeiten",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "soziales_und_gemeinschaft",
+    "to": "veranstaltungen_und_treffen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "sparen_und_investieren",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "sparen_und_investieren",
+    "to": "umwelt_und_nachhaltigkeit",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "sport",
+    "to": "reisen_und_freizeit",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "steuern",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "steuern",
+    "to": "behoerden_und_verwaltung",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "stressmanagement",
+    "to": "fokus_und_konzentration",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "stressmanagement",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "studientechniken",
+    "to": "wissensverwaltung",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "studientechniken",
+    "to": "zeitmanagement",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "technische_trends",
+    "to": "soziale_themen",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "betriebssysteme",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "cybersecurity",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "hardware_und_smart_home",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "kreativitaet_und_hobbys",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "produktivitaet",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "programmiersprachen",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "softwareentwicklung",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "technologie_und_programmierung",
+    "to": "technische_trends",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "termine_und_fristen",
+    "to": "familienmanagement",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "termine_und_fristen",
+    "to": "zeitmanagement",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "typescript",
+    "to": "javascript",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "typescript",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "umwelt_und_nachhaltigkeit",
+    "to": "abfallmanagement",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "umwelt_und_nachhaltigkeit",
+    "to": "energieeffizienz",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "umwelt_und_nachhaltigkeit",
+    "to": "haushalt",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "umwelt_und_nachhaltigkeit",
+    "to": "nachhaltiger_lebensstil",
+    "type": "parent_of",
+    "weight": 10
+  },
+  {
+    "from": "umwelt_und_nachhaltigkeit",
+    "to": "reisen_und_freizeit",
+    "type": "related",
+    "weight": 3
+  },
+  {
+    "from": "unterkuenfte_und_transport",
+    "to": "budgetierung",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "veranstaltungen_und_treffen",
+    "to": "musik",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "veranstaltungen_und_treffen",
+    "to": "netzwerken",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "versicherungen",
+    "to": "familie_und_beziehungen",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "versicherungen",
+    "to": "finanzen_und_investitionen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "wartung",
+    "to": "abfallmanagement",
+    "type": "related",
+    "weight": 4
+  },
+  {
+    "from": "wartung",
+    "to": "makerspace_und_diy",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "wissensverwaltung",
+    "to": "aufgabenverwaltung",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "wissensverwaltung",
+    "to": "selbstreflexion",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "wissensverwaltung",
+    "to": "softwareentwicklung",
+    "type": "related",
+    "weight": 5
+  },
+  {
+    "from": "zeitmanagement",
+    "to": "arbeitsorganisation",
+    "type": "related",
+    "weight": 8
+  },
+  {
+    "from": "zeitmanagement",
+    "to": "kindergarten_und_schule",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "zeitmanagement",
+    "to": "termine_und_fristen",
+    "type": "related",
+    "weight": 7
+  },
+  {
+    "from": "zielsetzung_und_motivation",
+    "to": "arbeit_und_karriere",
+    "type": "related",
+    "weight": 6
+  },
+  {
+    "from": "zielsetzung_und_motivation",
+    "to": "produktivitaet",
+    "type": "related",
+    "weight": 7
+  }
+]

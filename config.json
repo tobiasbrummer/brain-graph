@@ -1,0 +1,14 @@
+{
+  "embedding_base_url": "http://localhost:8200/v1",
+  "embedding_model": "jina-embeddings-v3-Q4_K_M",
+  "embedding_dim": 1024,
+  "embedding_api_key": "unused",
+  "embedding_batch_size": 16,
+  "chunking_target_tokens": 384,
+  "chunking_min_tokens": 100,
+  "chunking_overlap_tokens": 50,
+  "chunking_language": "de",
+  "summary_base_url": "http://localhost:8100/v1",
+  "summary_model": "Qwen3-VL-4B-Thinking-Q4_K_M",
+  "summary_api_key": "unused"
+}
