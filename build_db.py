@@ -122,6 +122,23 @@ class BrainGraphDB:
             );
         """)
 
+        # Meta table (for deduplication and tracking)
+        self.con.execute("""
+            CREATE TABLE IF NOT EXISTS meta (
+                ulid VARCHAR PRIMARY KEY,
+                source_file VARCHAR NOT NULL,
+                source_hash VARCHAR NOT NULL,
+                source_commit VARCHAR,
+                source_commit_date TIMESTAMP,
+                source_dirty BOOLEAN,
+                created_at TIMESTAMP,
+                modified_at TIMESTAMP,
+                uses INTEGER,
+                importance DOUBLE,
+                decay DOUBLE
+            );
+        """)
+
     def import_nodes(self, nodes_path: Path, source_file: str):
         """Import nodes from JSON."""
         with open(nodes_path, encoding="utf-8") as f:
@@ -208,6 +225,28 @@ class BrainGraphDB:
                 VALUES (?, ?, ?)
             """, [chunk_id, embedding_truncated, source_file])
 
+    def import_meta(self, meta: dict):
+        """Import meta data from meta.json."""
+        self.con.execute("""
+            INSERT OR REPLACE INTO meta (
+                ulid, source_file, source_hash,
+                source_commit, source_commit_date, source_dirty,
+                created_at, modified_at, uses, importance, decay
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            meta.get('ulid'),
+            meta.get('source_file'),
+            meta.get('source_hash'),
+            meta.get('source_commit'),
+            meta.get('source_commit_date'),
+            meta.get('source_dirty'),
+            meta.get('created_at'),
+            meta.get('modified_at'),
+            meta.get('uses'),
+            meta.get('importance'),
+            meta.get('decay')
+        ])
+
     def import_taxonomy(
         self,
         nodes_path: Path = Path("data/taxonomy.nodes.json"),
@@ -288,11 +327,13 @@ class BrainGraphDB:
             ner_nodes_file = data_dir / "ner" / "nodes" / month_folder / f"{filename_base}.ner.nodes.json"
             ner_edges_file = data_dir / "ner" / "edges" / month_folder / f"{filename_base}.ner.edges.json"
 
-            # Load meta for source_file info
+            # Load and import meta
             source_file = filename_base
             if meta_file.exists():
                 meta = json.loads(meta_file.read_text(encoding="utf-8"))
                 source_file = meta.get("source_file", filename_base)
+                print(f"  Meta: {meta_file.name}", file=sys.stderr)
+                self.import_meta(meta)
 
             # Import nodes
             print(f"  Nodes: {nodes_file.name}", file=sys.stderr)
@@ -345,6 +386,7 @@ class BrainGraphDB:
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type)")
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_id)")
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id)")
+        self.con.execute("CREATE INDEX IF NOT EXISTS idx_meta_hash ON meta(source_hash)")
 
         print("  FTS index (BM25)...", file=sys.stderr)
         self.con.execute("""

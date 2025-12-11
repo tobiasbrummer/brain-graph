@@ -35,7 +35,8 @@ from openai import OpenAI
 from file_utils import (
     extract_ulid_from_md,
     get_output_paths,
-    ensure_output_dirs
+    ensure_output_dirs,
+    update_meta
 )
 
 
@@ -323,21 +324,12 @@ def main():
         }
 
     # Update meta
-    now = datetime.now(timezone.utc)
-    meta["modified_at"] = now.isoformat()
-    meta["processing_steps"].append({
+    update_meta(output_paths['meta'], {
         "step": "embedding",
-        "completed": True,
-        "timestamp": now.isoformat(),
         "embedding_count": len(embeddings),
         "model": config["embedding_model"],
         "dim": actual_dim
     })
-
-    output_paths['meta'].write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
     print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 

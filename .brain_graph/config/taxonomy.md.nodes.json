@@ -1,7 +1,7 @@
 [
   {
     "id": "3d_druck",
-    "ulid": "01KC02XETH737PKEF9EBXDFTP0",
+    "ulid": "01KC7K0PC5737PKEF9EBXDFTP0",
     "title": "3D-Druck",
     "description": "3D-Druck behandelt additive Fertigung und alle Schritte von der Modellierung bis zum fertigen Druck. Inhalte sind CAD-Modelle, Slicer-Software, Filamentwahl, Druckparameter, Kalibrierung, Fehlersuche, Drucktechniken und Nachbearbeitung. Notizen können Projektlogs, Profileinstellungen, Materialtests und Optimierungsschritte enthalten. Allgemeine DIY-Projekte ohne Bezug zu Additive Manufacturing gehören in Makerspace und DIY.",
     "keywords": [
@@ -16,7 +16,7 @@
   },
   {
     "id": "abfallmanagement",
-    "ulid": "01KC02XETH1P9N0WZFRNMAMG10",
+    "ulid": "01KC7K0PC51P9N0WZFRNMAMG10",
     "title": "Abfallmanagement",
     "description": "Abfallmanagement behandelt den Umgang mit Müll, Recycling und Vermeidung. Inhalte sind Mülltrennung, Kompostierung, Upcycling, Zero-Waste-Ansätze, Plastikvermeidung und lokale Entsorgungsregeln. Notizen können Sortierregeln, Projektideen zum Wiederverwenden, Erfahrungsberichte mit Sammelsystemen und Optimierungen im Alltag enthalten. Kreative Bastelprojekte mit Fokus auf Upcycling können auch mit Makerspace und DIY verknüpft sein.",
     "keywords": [
@@ -31,7 +31,7 @@
   },
   {
     "id": "aktivitaeten_und_sehenswuerdigkeiten",
-    "ulid": "01KC02XETH9V7MY7K20K9TNDM3",
+    "ulid": "01KC7K0PC59V7MY7K20K9TNDM3",
     "title": "Aktivitäten und Sehenswürdigkeiten",
     "description": "Aktivitäten und Sehenswürdigkeiten umfasst das, was man vor Ort unternimmt. Inhalte sind Sightseeing, Touren, Museen, Wandern, Kulturangebote, Freizeitparks, besondere Orte und lokale Erfahrungen. Notizen können Must-See-Listen, Tagespläne, Bewertungen von Attraktionen, Kinderfreundlichkeit und persönliche Highlights enthalten. Wenn es primär um Fotografie- oder Videoprojekte der Reise geht, gehört der Schwerpunkt in Fotografie und Videografie.",
     "keywords": [
@@ -47,7 +47,7 @@
   },
   {
     "id": "arbeit_und_karriere",
-    "ulid": "01KC02XETH268GCWGG1TVG7GVC",
+    "ulid": "01KC7K0PC5268GCWGG1TVG7GVC",
     "title": "Arbeit und Karriere",
     "description": "Arbeit und Karriere umfasst berufliches Leben, Jobwahl, Laufbahn und Entwicklung im Arbeitskontext. Inhalte sind Berufsfelder, Jobzufriedenheit, Arbeitgeberwahl, Karriereziele, Rollenwechsel und Arbeitsbedingungen. Notizen können Lebenslauf-Ideen, Jobtagebuch, Entscheidungen, Gehaltsüberlegungen und langfristige Karrierestrategien enthalten. Reine Task- oder Zeitplanung ohne Karrierekontext gehört eher in Produktivität.",
     "keywords": [
@@ -66,7 +66,7 @@
   },
   {
     "id": "arbeitsorganisation",
-    "ulid": "01KC02XETHR0AHT0H0THWTW3WW",
+    "ulid": "01KC7K0PC5R0AHT0H0THWTW3WW",
     "title": "Arbeitsorganisation",
     "description": "Arbeitsorganisation umfasst Strukturierung und Gestaltung der Arbeitssituation. Inhalte sind Arbeitsplatzgestaltung, Homeoffice-Setup, Ablage im Büro, Prozessoptimierung, Workflow-Design und Teamorganisation. Notizen können To-Desk-Layouts, Dateiablagesysteme, Büroregeln, Meeting-Strukturen und Verbesserungsideen enthalten. Allgemeine persönliche Produktivität ohne klaren Arbeitskontext gehört eher in Produktivität.",
     "keywords": [
@@ -81,7 +81,7 @@
   },
   {
     "id": "arzt_und_vorsorge",
-    "ulid": "01KC02XETHMR433NM8DA1ZP470",
+    "ulid": "01KC7K0PC5MR433NM8DA1ZP470",
     "title": "Arzt und Vorsorge",
     "description": "Arzt und Vorsorge umfasst alle Kontakte zu medizinischem Personal sowie präventive Maßnahmen. Hierzu gehören Arztbesuche, Untersuchungen, Check-ups, Impfungen, Screening-Programme, Laborberichte und medizinische Empfehlungen. Notizen können Terminvorbereitung, Fragen an den Doctor, Befunde, Nachsorgepläne und Vorsorgestrategien enthalten. Breitere Lifestyle-Themen ohne konkreten Arzt- oder Präventionsbezug liegen eher in Gesundheit allgemein.",
     "keywords": [
@@ -97,7 +97,7 @@
   },
   {
     "id": "aufgabenverwaltung",
-    "ulid": "01KC02XETH7A9EJXQK1R1XQE12",
+    "ulid": "01KC7K0PC57A9EJXQK1R1XQE12",
     "title": "Aufgabenverwaltung",
     "description": "Aufgabenverwaltung behandelt das Erfassen, Strukturieren und Abarbeiten von Todos und Projekten. Dazu gehören Task-Management-Systeme, Kanban-Boards, Backlogs, Checklisten, Projektstrukturierung und Review-Prozesse. Hier passen Notizen zu Tool-Setups (z. B. Trello, Todoist), eigenen Workflows, Projektstatus, Prioritäten und Reflektionen über Durchsatz. Reine inhaltliche Notizen ohne Task-Charakter gehören eher in Wissensverwaltung oder thematische Kategorien.",
     "keywords": [
@@ -113,7 +113,7 @@
   },
   {
     "id": "bankangelegenheiten",
-    "ulid": "01KC02XETHKSRQ7MM9V6R38M1C",
+    "ulid": "01KC7K0PC5KSRQ7MM9V6R38M1C",
     "title": "Bankangelegenheiten",
     "description": "Bankangelegenheiten behandelt den operativen Umgang mit Banken. Inhalte sind Kontoführung, Überweisungen, Kreditkarten, Kreditanträge, Dispo, Online Banking, Authentifizierungsverfahren und Gebühren. Notizen können Kontenübersichten, Gespräche mit Bankberatern, Konditionsvergleiche und Einrichtung von Daueraufträgen enthalten. Strategische Finanzplanung und Investments gehören eher in Finanzen und Investitionen.",
     "keywords": [
@@ -128,7 +128,7 @@
   },
   {
     "id": "bash_shell_scripting",
-    "ulid": "01KC02XETHG41813E9AVPN3C69",
+    "ulid": "01KC7K0PC5G41813E9AVPN3C69",
     "title": "Bash/Shell Scripting",
     "description": "Bash/Shell Scripting umfasst Skripte und Kommandozeilenarbeit in Unix-/Linux-Umgebungen. Inhalte sind Shell-Befehle, Automationsskripte, Pipe-Workflows, Cronjobs, Systemadministration und CLI-Tools. Notizen können konkrete Skripte, One-Liner, Dotfiles, Debugging-Tipps, Sicherheitsüberlegungen und Best Practices für Shell-Design enthalten. Allgemeine Linux-Administration ohne Skriptfokus gehört eher in Linux.",
     "keywords": [
@@ -143,7 +143,7 @@
   },
   {
     "id": "behoerden_und_verwaltung",
-    "ulid": "01KC02XETHJEKHN7R8H37Z94E9",
+    "ulid": "01KC7K0PC5JEKHN7R8H37Z94E9",
     "title": "Behörden und Verwaltung",
     "description": "Behörden und Verwaltung behandelt amtliche Angelegenheiten, Bürokratie und gesetzliche Vorschriften. Inhalte sind Formulare, Anträge, Meldungen, amtliche Bescheide, Fristen und grundlegende Verwaltungsprozesse. Notizen können Checklisten für Anträge, Gesprächsnotizen von Ämtern, benötigte Unterlagen und eigene Ablaufpläne enthalten. Finanzspezifische Themen ohne Behördenkontakt gehören eher in Finanzen und Investitionen.",
     "keywords": [
@@ -161,7 +161,7 @@
   },
   {
     "id": "berufliche_weiterentwicklung",
-    "ulid": "01KC02XETHS1T4PVPZN7FTZEA3",
+    "ulid": "01KC7K0PC5S1T4PVPZN7FTZEA3",
     "title": "Berufliche Weiterentwicklung",
     "description": "Berufliche Weiterentwicklung behandelt Wachstum innerhalb oder zwischen Berufen. Inhalte sind Weiterbildung, Skill-Aufbau, Beförderung, Rollenwechsel, Gehaltsverhandlungen, Mentoring und langfristige Karriereplanung. Notizen können Entwicklungspläne, Kursauswahl, Feedbackgespräche, Jahresziele und Evaluierungen von Fortschritten enthalten. Reine fachliche Inhalte (z. B. neue Programmiersprache) gehören in die entsprechende Fachkategorie.",
     "keywords": [
@@ -176,7 +176,7 @@
   },
   {
     "id": "betriebssysteme",
-    "ulid": "01KC02XETHRJ9TGX7KVKBNQA8R",
+    "ulid": "01KC7K0PC5RJ9TGX7KVKBNQA8R",
     "title": "Betriebssysteme",
     "description": "Betriebssysteme behandelt OS-Konzepte, Installation und Konfiguration von Systemen wie Windows und macOS. Inhalte sind Systemsetup, Treiber, Benutzerverwaltung, File-Systeme, Security-Settings und Problembehebung. Notizen können Installationsanleitungen, Tuning-Tipps, Backup-Strategien und Vergleich verschiedener OS-Versionen enthalten. Spezifische Linux-Themen gehören in die Unterkategorie Linux.",
     "keywords": [
@@ -191,7 +191,7 @@
   },
   {
     "id": "budgetierung",
-    "ulid": "01KC02XETHQMN2YGMJRF2H3MF7",
+    "ulid": "01KC7K0PC5QMN2YGMJRF2H3MF7",
     "title": "Budgetierung",
     "description": "Budgetierung fokussiert auf Haushaltsplanung und Ausgabenkontrolle. Inhalte sind Budgets, Kategorien, Haushaltsbücher, Sparquoten, Kostenreduktion, Cashflow und Regel-Setups für Ausgaben. Notizen können Monatsabschlüsse, Plan-Ist-Vergleiche, Sparziele, Budget-Templates und Regelanpassungen enthalten. Themen zum Investieren oder langfristigem Vermögensaufbau gehören eher in Sparen und Investieren.",
     "keywords": [
@@ -206,7 +206,7 @@
   },
   {
     "id": "cybersecurity",
-    "ulid": "01KC02XETHF3YNSB4C09DTQPT5",
+    "ulid": "01KC7K0PC5F3YNSB4C09DTQPT5",
     "title": "Cybersecurity",
     "description": "Cybersecurity behandelt Informationssicherheit, Datenschutz und den Schutz von Systemen und Netzwerken. Inhalte sind Verschlüsselung, Authentifizierung, Firewalls, Sicherheitsprotokolle, Härtung von Systemen, Bedrohungsmodelle und Incident Response. Notizen können Security-Checklisten, Konfigurationsbeispiele, Threat-Analysen, Pen-Test-Erkenntnisse und Policy-Überlegungen enthalten. Rechtliche Regelungen ohne technischen Fokus gehören eher in Behörden und Verwaltung.",
     "keywords": [
@@ -221,7 +221,7 @@
   },
   {
     "id": "diaeten",
-    "ulid": "01KC02XETHYD2RZAVZW9AQW1DW",
+    "ulid": "01KC7K0PC5YD2RZAVZW9AQW1DW",
     "title": "Diäten",
     "description": "Diäten umfasst gezielte Ernährungspläne mit Fokus auf Gewichtsreduktion, Körperkomposition oder bestimmte gesundheitliche Ziele. Hier geht es um Abnehmen, Fasten, Low Carb, Keto, vegane oder vegetarische Diets und deren praktische Umsetzung. Notizen können Erfahrungen mit Diätprogrammen, Fortschrittsverfolgung, Cheat Days oder Herausforderungen beim Durchhalten enthalten. Allgemeines Kochen oder Genuss ohne Planungs- und Kontrollfokus gehört eher in Kochen oder Ernährung.",
     "keywords": [
@@ -238,7 +238,7 @@
   },
   {
     "id": "elternsein",
-    "ulid": "01KC02XETH4EVG8KQ1XXWZR45M",
+    "ulid": "01KC7K0PC54EVG8KQ1XXWZR45M",
     "title": "Elternsein",
     "description": "Elternsein behandelt das Leben als Mutter/Vater oder Bezugsperson. Inhalte sind Elternrolle, Rollenverteilung, Belastungen, Freude, Vereinbarkeit, pädagogische Überlegungen und allgemeine Entwicklung der Kinder. Notizen können Alltagsbeispiele, Reflexionen über eigenes Verhalten, Bedürfnisse der Kinder, organisatorische Herausforderungen und emotionale Themen enthalten. Konkrete institutionelle Themen wie Schulverwaltung gehören eher in Kindergarten und Schule oder Behörden und Verwaltung.",
     "keywords": [
@@ -254,7 +254,7 @@
   },
   {
     "id": "energieeffizienz",
-    "ulid": "01KC02XETHYVD5A3G9FZTXG1ZW",
+    "ulid": "01KC7K0PC5YVD5A3G9FZTXG1ZW",
     "title": "Energieeffizienz",
     "description": "Energieeffizienz fokussiert auf das Senken von Energieverbrauch und Kosten. Inhalte sind Stromsparen, Heizkosten, Dämmung, erneuerbare Energien, Solar, intelligente Steuerung und Effizienzklassen von Geräten. Notizen können Verbrauchsprotokolle, Umbaupläne, Amortisationsrechnungen, Hardwareauswahl und Optimierungsideen enthalten. Allgemeine Nachhaltigkeitsdiskussionen ohne Energiebezug gehören eher in Umwelt und Nachhaltigkeit.",
     "keywords": [
@@ -270,7 +270,7 @@
   },
   {
     "id": "ernaehrung",
-    "ulid": "01KC02XETHB4YZZH9PX1YN06DD",
+    "ulid": "01KC7K0PC5B4YZZH9PX1YN06DD",
     "title": "Ernährung",
     "description": "Ernährung deckt alles rund ums Essen, Diät, Food und gesundes Essverhalten ab. Typisch sind Fragen zu Nährstoffen, Vitaminen, Kalorien, Mahlzeitenplanung, Lebensmittelauswahl und langfristigen Ernährungsgewohnheiten. Hier landen auch Überlegungen zu Essverhalten, Verdauung, Intoleranzen und wie Ernährung das Wohlbefinden oder die körperliche Verfassung beeinflusst. Finanz- oder Nachhaltigkeitsaspekte von Lebensmitteln sind nur Neben-Aspekte, Hauptfokus ist die Ernährungsqualität.",
     "keywords": [
@@ -288,7 +288,7 @@
   },
   {
     "id": "ernaehrungswissenschaft",
-    "ulid": "01KC02XETHSDCSXZ3B6DMBJ64D",
+    "ulid": "01KC7K0PC5SDCSXZ3B6DMBJ64D",
     "title": "Ernährungswissenschaft",
     "description": "Ernährungswissenschaft behandelt die wissenschaftliche Perspektive auf Nutrition. Dazu zählen Ernährungsforschung, Diätetik, Stoffwechselprozesse, biochemische Hintergründe und evidenzbasierte Empfehlungen. Hier passen Notizen zu Studien, Makro- und Mikronährstoffen, Nahrungsergänzungsmitteln, Laborwerten sowie kritische Bewertungen von Health-Claims. Diese Kategorie ist analytischer und theoriebezogener als alltagspraktische Themen wie Kochen oder Diäten.",
     "keywords": [
@@ -302,7 +302,7 @@
   },
   {
     "id": "familie_und_beziehungen",
-    "ulid": "01KC02XETHE283P3JY11PSTAJY",
+    "ulid": "01KC7K0PC5E283P3JY11PSTAJY",
     "title": "Familie und Beziehungen",
     "description": "Familie und Beziehungen umfasst familiäre Strukturen, Partnerschaften, Freundschaften und enge Bindungen. Inhalte sind Familienleben, Rollen, Konflikte, Nähe, Liebe, Verbundenheit und gemeinsamer Alltag. Notizen können Erziehungsfragen, Alltagssituationen, Beziehungsgespräche, Rituale, Sorgen und schöne Momente enthalten. Berufliche Kontakte ohne Privatheitsgrad gehören eher in Netzwerken.",
     "keywords": [
@@ -321,7 +321,7 @@
   },
   {
     "id": "familienmanagement",
-    "ulid": "01KC02XETHY4EJAMS0Q17HG0RB",
+    "ulid": "01KC7K0PC5Y4EJAMS0Q17HG0RB",
     "title": "Familienmanagement",
     "description": "Familienmanagement behandelt die Organisation des Familienalltags. Inhalte sind Aufgabenverteilung, Familienkalender, Routinen, Einkaufs- und To-do-Listen, Budgetplanung für die Familie und Koordination von Terminen. Notizen können Wochenpläne, Verantwortlichkeitsübersichten, Checklisten und Review-Runden enthalten. Rein haushaltsbezogene Themen ohne Familienkoordination gehören eher in Haushalt.",
     "keywords": [
@@ -335,7 +335,7 @@
   },
   {
     "id": "finanzen_und_investitionen",
-    "ulid": "01KC02XETHP0R2SNFR0QEF51M0",
+    "ulid": "01KC7K0PC5P0R2SNFR0QEF51M0",
     "title": "Finanzen und Investitionen",
     "description": "Finanzen und Investitionen deckt Geldmanagement, Vermögensaufbau und wirtschaftliche Entscheidungen ab. Inhalte sind Budgetierung, Sparen, Investieren, finanzielle Freiheit, Risiko, Ökonomie und persönliche Finanzstrategie. Notizen können Kontenübersichten, Entscheidungslogs, Portfolio-Überlegungen, Szenarienrechnungen und finanzielle Ziele enthalten. Reine Steuer- oder Behördenformalia gehören eher in Steuern bzw. Behörden und Verwaltung.",
     "keywords": [
@@ -354,7 +354,7 @@
   },
   {
     "id": "fokus_und_konzentration",
-    "ulid": "01KC02XETH8B3RZQE64GXGZZZA",
+    "ulid": "01KC7K0PC58B3RZQE64GXGZZZA",
     "title": "Fokus und Konzentration",
     "description": "Fokus und Konzentration dreht sich um Deep Work, Aufmerksamkeit und ablenkungsfreies Arbeiten. Typische Inhalte sind Konzentrationstechniken, Flow-Zustände, Pomodoro, Umgang mit Notifications, Fokus-Apps und die Gestaltung einer störungsarmen Umgebung. Notizen können Experimente mit Fokus-Ritualen, Selbstbeobachtung, Erfolgs- und Misserfolgsfaktoren und Strategien zur Reduktion von Multitasking enthalten. Themen, die primär emotionale Belastung betreffen, gehören eher in Mentale Gesundheit oder Stressmanagement.",
     "keywords": [
@@ -369,7 +369,7 @@
   },
   {
     "id": "fotografie_und_videografie",
-    "ulid": "01KC02XETHP7Y3EX0G44K5R4D3",
+    "ulid": "01KC7K0PC5P7Y3EX0G44K5R4D3",
     "title": "Fotografie und Videografie",
     "description": "Fotografie und Videografie deckt Bildgestaltung, Kameraarbeit und Bewegtbildproduktion ab. Inhalte sind Kamera-Settings, Objektive, Lichtsetzung, Bildkomposition, Videobearbeitung, Schnitt-Workflows, Shooting-Planung und Portfolioaufbau. Notizen können Shooting-Logs, Location-Ideen, Presets, Color-Grading-Notizen und Erfahrungsberichte zu Gear enthalten. Wenn der Fokus primär auf Reisezielen liegt und Bilder nur Nebenprodukt sind, gehört es eher in Aktivitäten und Sehenswürdigkeiten.",
     "keywords": [
@@ -385,7 +385,7 @@
   },
   {
     "id": "freiwilligenarbeit",
-    "ulid": "01KC02XETHAD8JNSMJD9TNP5MN",
+    "ulid": "01KC7K0PC5AD8JNSMJD9TNP5MN",
     "title": "Freiwilligenarbeit",
     "description": "Freiwilligenarbeit fokussiert auf ehrenamtliches Engagement und gemeinnützige Arbeit. Inhalte sind Tätigkeiten bei Hilfsorganisationen, Vereinen, NGOs, Spendenaktionen, Mentoring und lokale Projekte. Notizen können Einsatzberichte, Motivation, Zeitplanung, Organisationsstrukturen, Impact-Reflexionen und Ideen für neue Engagementformen enthalten. Allgemeine sozialpolitische Debatten ohne konkretes eigenes Engagement gehören eher in Soziale Themen.",
     "keywords": [
@@ -400,7 +400,7 @@
   },
   {
     "id": "gesundheit",
-    "ulid": "01KC02XETHJCNS5NQMS92F2SPX",
+    "ulid": "01KC7K0PC5JCNS5NQMS92F2SPX",
     "title": "Gesundheit",
     "description": "Diese Kategorie umfasst körperliche und psychische Gesundheit im Alltag. Hier geht es um Fitness, medizinische Themen, Vorsorge, Krankheitsverläufe, Genesung und allgemeines Wohlbefinden. Inhalte können von Arztbesuchen über Health-Check-ups bis hin zu Tipps für Vitalität, Prävention und gesunden Lebensstil reichen. Notizen, die primär Leistung, Karriere oder Organisation betreffen, gehören eher in Produktivität oder Arbeit und Karriere, nicht hier.",
     "keywords": [
@@ -421,7 +421,7 @@
   },
   {
     "id": "git_und_versionierung",
-    "ulid": "01KC02XETH7F107CNBNQB9QXY2",
+    "ulid": "01KC7K0PC57F107CNBNQB9QXY2",
     "title": "Git und Versionierung",
     "description": "Git und Versionierung fokussiert auf Versionskontrolle und kollaboratives Arbeiten am Code. Inhalte sind Branching-Modelle, Merges, Rebase, Pull Requests, Workflows auf GitHub/GitLab/Bitbucket und Commit-Strategien. Notizen können Befehlscheatsheets, Hooks, CI-Integration, Release-Management und Fehleranalysen bei Merge-Konflikten enthalten. Allgemeine Projektorganisation ohne Versionsbezug gehört eher in Arbeitsorganisation oder Softwareentwicklung.",
     "keywords": [
@@ -438,7 +438,7 @@
   },
   {
     "id": "hardware_und_smart_home",
-    "ulid": "01KC02XETHRQHBP4T8CYHH40JG",
+    "ulid": "01KC7K0PC5RQHBP4T8CYHH40JG",
     "title": "Hardware und Smart Home",
     "description": "Hardware und Smart Home umfasst physische IT-Geräte und vernetzte Heimautomation. Dazu gehören PCs, Komponenten, Sensoren, Aktoren, IoT-Geräte, smarte Steckdosen, Lichtsteuerungen, Hubs und Integrationen. Notizen können Setups, Verdrahtung, Protokolle (z. B. Zigbee, MQTT), Automationsregeln und Troubleshooting enthalten. Reine Bastelprojekte ohne Smart-Home-Bezug gehören eher in Makerspace und DIY.",
     "keywords": [
@@ -453,7 +453,7 @@
   },
   {
     "id": "haushalt",
-    "ulid": "01KC02XETH9NBJBSSX70ZMRMB9",
+    "ulid": "01KC7K0PC59NBJBSSX70ZMRMB9",
     "title": "Haushalt",
     "description": "Haushalt umfasst das Führen und Organisieren von Wohnung oder Haus. Dazu gehören Hausarbeit, Wohnungsorganisation, Einrichtung, Haushaltsführung, Umgang mit Gegenständen und alltägliche Routinen im Home-Bereich. Notizen können sich auf Putzpläne, Einkaufslisten, Lagerung, Renovierungsplanung, Möbel, Haushaltsgeräte oder generelle Organisation beziehen. Familienspezifische Koordination steht dagegen eher unter Familienmanagement.",
     "keywords": [
@@ -472,7 +472,7 @@
   },
   {
     "id": "internationale_beziehungen",
-    "ulid": "01KC02XETHH9DDE8R7KR3W7BWM",
+    "ulid": "01KC7K0PC5H9DDE8R7KR3W7BWM",
     "title": "Internationale Beziehungen",
     "description": "Internationale Beziehungen behandelt Außenpolitik, Geopolitik und globale Verflechtungen. Inhalte sind Diplomatie, Welthandel, Allianzen, Konflikte, Krieg und Frieden, UN-Politik und internationale Organisationen. Notizen können Länderanalysen, Ereignisprotokolle, Strategieüberlegungen, Szenarien und historische Vergleiche enthalten. Persönliche Reiseerlebnisse gehören eher in Reisen und Freizeit.",
     "keywords": [
@@ -488,7 +488,7 @@
   },
   {
     "id": "javascript",
-    "ulid": "01KC02XETHPVGKNN9XHV21P0TC",
+    "ulid": "01KC7K0PC5PVGKNN9XHV21P0TC",
     "title": "JavaScript",
     "description": "JavaScript umfasst Frontend- und Backend-Entwicklung mit JS. Inhalte sind DOM-Manipulation, Browser-APIs, Node.js, Frameworks wie React, Angular oder Vue sowie Build-Tooling. Notizen können Komponenten-Design, Event-Handling, Asynchronität, typische Bugs, Architekturentscheidungen und Snippets enthalten. Wenn der Fokus klar auf TypeScript liegt, gehören Inhalte eher in TypeScript, auch wenn JS erwähnt wird.",
     "keywords": [
@@ -504,7 +504,7 @@
   },
   {
     "id": "jobsuchen_und_bewerbungen",
-    "ulid": "01KC02XETHQPAXEF18AG04W1V1",
+    "ulid": "01KC7K0PC5QPAXEF18AG04W1V1",
     "title": "Jobsuchen und Bewerbungen",
     "description": "Jobsuchen und Bewerbungen fokussiert auf den Prozess, einen neuen Job zu finden. Inhalte sind Stellensuche, Lebenslauf, Anschreiben, Interviewvorbereitung, Assessment-Center, Headhunter und Bewerbungsstrategien. Notizen können Rollenprofile, individuelle Bewerbungen, Fragenkataloge, Feedback aus Gesprächen und Entscheidungslogbücher enthalten. Allgemeine Karriereentwicklung ohne konkreten Bewerbungsprozess gehört eher in Berufliche Weiterentwicklung.",
     "keywords": [
@@ -520,7 +520,7 @@
   },
   {
     "id": "kindererziehung",
-    "ulid": "01KC02XETHGQ22FB91V46VN5FX",
+    "ulid": "01KC7K0PC5GQ22FB91V46VN5FX",
     "title": "Kindererziehung",
     "description": "Kindererziehung fokussiert auf Erziehungsstile, Regeln, Förderung und Beziehungsgestaltung mit Kindern. Inhalte sind Disziplin, Grenzen, Bindung, kindliche Entwicklung, Mediennutzung, Konflikte und pädagogische Strategien. Notizen können konkrete Situationen, Reflexionen, Vereinbarungen, Konsequenzen und Ideen zur Unterstützung der Kinder enthalten. Administrative Themen rund um Einrichtungen gehören eher in Kindergarten und Schule.",
     "keywords": [
@@ -534,7 +534,7 @@
   },
   {
     "id": "kindergarten_und_schule",
-    "ulid": "01KC02XETHA4T7D80P8NDZ3BHT",
+    "ulid": "01KC7K0PC5A4T7D80P8NDZ3BHT",
     "title": "Kindergarten und Schule",
     "description": "Kindergarten und Schule behandelt Bildungs- und Betreuungsinstitutionen für Kinder. Inhalte sind Auswahl von Einrichtungen, Eingewöhnung, Kommunikation mit Pädagogen, Schulwahl, Hausaufgaben, Elternabende und organisatorische Themen. Notizen können Protokolle, To-dos, Infobriefe, Terminübersichten und Entwicklungsrückmeldungen enthalten. Grundsätzliche Erziehungsfragen ohne Institutsbezug gehören eher in Kindererziehung.",
     "keywords": [
@@ -549,7 +549,7 @@
   },
   {
     "id": "kochen",
-    "ulid": "01KC02XETHDW0XCDT15REX9FN9",
+    "ulid": "01KC7K0PC5DW0XCDT15REX9FN9",
     "title": "Kochen",
     "description": "Kochen beschreibt die praktische Zubereitung von Speisen im Alltag. Inhalte sind Rezepte, Kochtechniken, Backen, Küchenorganisation, Zutatenwahl, Cuisine-Stile und konkrete Anleitungen Schritt für Schritt. Hier passen auch Notizen zu Küchengeräten, Meal-Prep, kulinarischen Experimenten und Verbesserungen von Koch-Skills. Ernährungsphilosophie oder Diätstrategien ohne direkten Kochbezug gehören eher in Ernährung oder Diäten.",
     "keywords": [
@@ -566,7 +566,7 @@
   },
   {
     "id": "kommunikation_mit_behoerden",
-    "ulid": "01KC02XETHQJQN7VJSXBDCD1X0",
+    "ulid": "01KC7K0PC5QJQN7VJSXBDCD1X0",
     "title": "Kommunikation mit Behörden",
     "description": "Kommunikation mit Behörden umfasst schriftlichen und mündlichen Austausch mit Ämtern und öffentlichen Institutionen. Inhalte sind Anschreiben, Widersprüche, Nachfragen zu Bescheiden, Formulierungen, Telefonnotizen und Gesprächsvorbereitung. Notizen können Briefentwürfe, Gesprächsleitfäden, Protokolle, Eskalationsstufen und Dokumentation von Ergebnissen enthalten. Kreatives oder persönliches Schreiben ohne Amtsbezug gehört eher in Schreiben.",
     "keywords": [
@@ -581,7 +581,7 @@
   },
   {
     "id": "kreativitaet_und_hobbys",
-    "ulid": "01KC02XETHZE269BRSS8TTRHXN",
+    "ulid": "01KC7K0PC5ZE269BRSS8TTRHXN",
     "title": "Kreativität und Hobbys",
     "description": "Kreativität und Hobbys bündelt freizeitbezogene, schöpferische und spielerische Aktivitäten. Dazu zählen künstlerische Projekte, Basteln, DIY, kreative Routinen und persönliche Leidenschaften außerhalb von Arbeit und Pflicht. Notizen können Projektideen, Moodboards, Inspirationssammlungen, Hobby-Logbücher und Reflexionen über kreative Blockaden enthalten. Sobald es stark technisch wird (z. B. Programmierung), gehört der Hauptfokus eher in Technologie und Programmierung.",
     "keywords": [
@@ -600,7 +600,7 @@
   },
   {
     "id": "kultur_und_gesellschaft",
-    "ulid": "01KC02XETHYCW1Q78GTJHX4ER0",
+    "ulid": "01KC7K0PC5YCW1Q78GTJHX4ER0",
     "title": "Kultur und Gesellschaft",
     "description": "Kultur und Gesellschaft bündelt Themen rund um Werte, Normen, Traditionen und das Funktionieren von Gesellschaften. Inhalte sind Kulturgeschichte, Bräuche, Medien, Popkultur, soziale Strukturen und gesellschaftliche Diskurse. Notizen können Beobachtungen, Analysen, Lese- oder Filmnotizen, Diskussionen und eigene Positionierungen enthalten. Persönliche Beziehungsfragen ohne gesellschaftliche Ebene gehören eher in Familie und Beziehungen.",
     "keywords": [
@@ -619,7 +619,7 @@
   },
   {
     "id": "kunst_und_handwerk",
-    "ulid": "01KC02XETHWNE7TA721G72WJP2",
+    "ulid": "01KC7K0PC5WNE7TA721G72WJP2",
     "title": "Kunst und Handwerk",
     "description": "Kunst und Handwerk umfasst Malen, Zeichnen, Design, Skizzieren, Nähen, Töpfern und andere Crafting-Aktivitäten. Hier passen Anleitungen, Projektideen, Materiallisten, Techniktipps, Stil-Experimente und Reflexionen über ästhetische Entscheidungen. Notizen können auch Ausstellungsbesuche, Portfolio-Planung oder Entwicklung eines eigenen Stils abbilden. Reine Theorie zu Kunstgeschichte gehört eher in Kunst und Kulturgeschichte.",
     "keywords": [
@@ -636,7 +636,7 @@
   },
   {
     "id": "kunst_und_kulturgeschichte",
-    "ulid": "01KC02XETHH8V317EYJSG02BAB",
+    "ulid": "01KC7K0PC5H8V317EYJSG02BAB",
     "title": "Kunst und Kulturgeschichte",
     "description": "Kunst und Kulturgeschichte behandelt historische und theoretische Aspekte von Kunst und Kultur. Inhalte sind Epochen, Stile, Künstler, Museen, Ausstellungen, Architektur und Kulturerbe. Notizen können Zusammenfassungen, Museumsbesuche, Werkinterpretationen, Stilvergleiche und Lektürenotizen enthalten. Eigene künstlerische Praxis gehört eher in Kunst und Handwerk.",
     "keywords": [
@@ -652,7 +652,7 @@
   },
   {
     "id": "lernen_und_bildung",
-    "ulid": "01KC02XETHABHZQSJ0QC7GAQX2",
+    "ulid": "01KC7K0PC5ABHZQSJ0QC7GAQX2",
     "title": "Lernen und Bildung",
     "description": "Lernen und Bildung umfasst alle Formen von formaler und informeller Education. Hier geht es um Schule, Studium, Weiterbildung, Kurse, Lernstrategien und lebenslanges Lernen. Notizen können persönliche Lernziele, Curricula, Reflexionen über Bildungswege, Vergleich von Programmen sowie Erfahrungen mit Prüfungen und Abschlüssen enthalten. Reine Wissensorganisation ohne Lernkontext gehört eher in Wissensverwaltung.",
     "keywords": [
@@ -672,7 +672,7 @@
   },
   {
     "id": "linux",
-    "ulid": "01KC02XETHQ8S4S9XHRXZW42XS",
+    "ulid": "01KC7K0PC5Q8S4S9XHRXZW42XS",
     "title": "Linux",
     "description": "Linux fokussiert speziell auf Linux-Distributionen und deren Nutzung. Inhalte sind Paketmanagement, Terminal-Nutzung, Dienste, Server-Administration, Desktop-Umgebungen, Shell-Tools und Systemd/Init-Setups. Notizen können Distro-Vergleiche, Config-Dateien, Troubleshooting-Logs, Skripte und Best Practices für Admin-Aufgaben enthalten. Allgemeine Shell-Themen, die mehrere OS betreffen, gehören eher in Bash/Shell Scripting.",
     "keywords": [
@@ -687,7 +687,7 @@
   },
   {
     "id": "makerspace_und_diy",
-    "ulid": "01KC02XETH3XRSCAGZ7HPVQJN2",
+    "ulid": "01KC7K0PC53XRSCAGZ7HPVQJN2",
     "title": "Makerspace und DIY",
     "description": "Makerspace und DIY umfasst Bastel- und Bauprojekte mit Technik- oder Handwerksfokus. Dazu zählen Elektronik, Arduino, Raspberry Pi, Prototyping, Löten, Holz- und Metallprojekte, Heimautomation als Bastelprojekt und Experimentieraufbauten. Notizen können Schaltpläne, Bauteillisten, Projektjournale, Fehlersuche und Iterationen dokumentieren. Reine Software ohne physischen Bezug gehört eher in Technologie und Programmierung.",
     "keywords": [
@@ -703,7 +703,7 @@
   },
   {
     "id": "mechanische_tastaturen",
-    "ulid": "01KC02XETHQYFJJ2C11P0JV8CY",
+    "ulid": "01KC7K0PC5QYFJJ2C11P0JV8CY",
     "title": "Mechanische Tastaturen",
     "description": "Mechanische Tastaturen umfasst Design, Bau und Nutzung von Custom Keyboards. Hier passen Themen wie Switches, Keycaps, Layout-Design, Ergonomie, Firmware (QMK, VIA, ZMK), Löt- oder Hotswap-Projekte und Modding hin. Notizen können Build-Logs, Layout-Experimente, Keymap-Entwürfe, Teilelisten und Eindrücke zu Tippgefühl oder Sound enthalten. Allgemeine Software-Konfiguration ohne Keyboard-Bezug gehört eher in Technologie und Programmierung.",
     "keywords": [
@@ -722,7 +722,7 @@
   },
   {
     "id": "mentale_gesundheit",
-    "ulid": "01KC02XETHWNP4FT3XR1AFQRW9",
+    "ulid": "01KC7K0PC5WNP4FT3XR1AFQRW9",
     "title": "Mentale Gesundheit",
     "description": "Mentale Gesundheit deckt psychische Gesundheit, emotionales Wohlbefinden und mental wellbeing ab. Hier geht es um Stress, Depression, Angst, Burnout, Resilienz, Therapieerfahrungen, Achtsamkeit und psychologische Hintergründe. Notizen können sowohl subjektive Zustände und Krisen als auch Tools wie Meditation, Journaling oder therapeutische Methoden beschreiben. Reine Produktivitäts- oder Organisationsfragen ohne emotionalen Bezug gehören nicht hierher.",
     "keywords": [
@@ -738,7 +738,7 @@
   },
   {
     "id": "musik",
-    "ulid": "01KC02XETHDFD0GMGM0J48W3JV",
+    "ulid": "01KC7K0PC5DFD0GMGM0J48W3JV",
     "title": "Musik",
     "description": "Musik behandelt alles rund um Musikhören, Musikmachen und Musiktheorie. Inhalte sind Instrumentenlernen, Komposition, Gesang, Band- oder Orchestererfahrungen, Playlists, Konzertbesuche und Musikproduktion. Notizen können Übungspläne, Songideen, Harmoniefolgen, Equipment-Fragen und Reflexionen über Musikgeschmack enthalten. Gesellschaftliche Themen rund um Musikszene ohne persönlichen Praxisbezug gehören eher in Kultur und Gesellschaft.",
     "keywords": [
@@ -755,7 +755,7 @@
   },
   {
     "id": "nachhaltiger_lebensstil",
-    "ulid": "01KC02XETHV7VGNS3GZ0XZ319D",
+    "ulid": "01KC7K0PC5V7VGNS3GZ0XZ319D",
     "title": "Nachhaltiger Lebensstil",
     "description": "Nachhaltiger Lebensstil umfasst praktische Entscheidungen für ein umweltbewusstes Leben. Inhalte sind grüner Lifestyle, Bio-Produkte, Fairtrade, regionaler und saisonaler Konsum, Konsumverzicht, Second Hand und Mobilitätsentscheidungen. Notizen können Selbstverpflichtungen, Challenges, Einkaufsleitlinien, Reflexionen über Konsumgewohnheiten und Erfahrungsberichte enthalten. Streng finanzielle Optimierung ohne Umweltfokus gehört eher in Sparen und Investieren oder Budgetierung.",
     "keywords": [
@@ -771,7 +771,7 @@
   },
   {
     "id": "netzwerken",
-    "ulid": "01KC02XETHJKDHT2G7PGB94Q51",
+    "ulid": "01KC7K0PC5JKDHT2G7PGB94Q51",
     "title": "Netzwerken",
     "description": "Netzwerken behandelt das gezielte Knüpfen und Pflegen von Kontakten zu beruflichen oder thematischen Zwecken. Inhalte sind Karrierenetzwerke, LinkedIn-Strategien, Visitenkarten, Follow-up-Mails, Elevator Pitches und Beziehungsmanagement. Notizen können Kontaktlisten, Gesprächsnotizen, Networking-Ziele, Eventstrategien und Nachverfolgung enthalten. Reine Freundschafts- oder Familienbeziehungen gehören eher in Familie und Beziehungen.",
     "keywords": [
@@ -786,7 +786,7 @@
   },
   {
     "id": "online_kurse_und_ressourcen",
-    "ulid": "01KC02XETHNJZX7YFAJN9125CP",
+    "ulid": "01KC7K0PC5NJZX7YFAJN9125CP",
     "title": "Online-Kurse und Ressourcen",
     "description": "Online-Kurse und Ressourcen umfasst E-Learning-Plattformen, digitale Lernmaterialien und webbasierte Tutorials. Hier gehören Notizen zu MOOCs, Udemy-, Coursera- oder YouTube-Kursen, Webinaren, Zertifikatsprogrammen und deren Qualität hin. Inhalte können Kurszusammenfassungen, To-Watch-Listen, Bewertungen, Preis-Leistungs-Einschätzungen und Transfer in die Praxis beschreiben. Allgemeine Lernmethodik ohne Bezug zu konkreten Ressourcen gehört eher in Studientechniken.",
     "keywords": [
@@ -803,7 +803,7 @@
   },
   {
     "id": "organisation",
-    "ulid": "01KC02XETHKFRBN632BS0KB3JV",
+    "ulid": "01KC7K0PC5KFRBN632BS0KB3JV",
     "title": "Organisation",
     "description": "Organisation im Haushalt betrifft Strukturierung, Aufräumen und Stauraumkonzepte in Wohnung oder Haus. Notizen können Decluttering-Projekte, Minimalismus, Ablagesysteme, Schrankorganisation, Etikettierung und praktische Aufbewahrungsideen enthalten. Der Fokus liegt auf physischer Ordnung und Home-Organisation, nicht auf digitalen Tools oder beruflichen Projekten. Digitale oder arbeitsbezogene Organisation gehört eher in Aufgabenverwaltung oder Wissensverwaltung.",
     "keywords": [
@@ -819,7 +819,7 @@
   },
   {
     "id": "partnerschaft",
-    "ulid": "01KC02XETH4NRAJ70V6Y3A3EM7",
+    "ulid": "01KC7K0PC54NRAJ70V6Y3A3EM7",
     "title": "Partnerschaft",
     "description": "Partnerschaft umfasst romantische Beziehungen und Ehe. Inhalte sind Kommunikation, Intimität, Alltagsaufteilung, Streitkultur, Paartherapie, Trennungsgedanken, Romantik und gemeinsame Ziele. Notizen können Gesprächsprotokolle, Wünsche, Bedürfnisse, Musteranalysen, Vereinbarungen und Paarrituale enthalten. Rein sexuelle Themen ohne Beziehungsfokus wären eine eigene Kategorie und gehören nicht automatisch hierher.",
     "keywords": [
@@ -835,7 +835,7 @@
   },
   {
     "id": "persoenliche_entwicklung",
-    "ulid": "01KC02XETHPWH74TVAG11EVQTW",
+    "ulid": "01KC7K0PC5PWH74TVAG11EVQTW",
     "title": "Persönliche Entwicklung",
     "description": "Persönliche Entwicklung umfasst Self-Improvement, Growth und langfristige Arbeit an Persönlichkeit und Mindset. Hier geht es um Werte, Gewohnheiten, Charakter, Lebensziele, Identität und innere Haltung. Notizen können Reflexionen, Entwicklungspläne, Coaching-Impulse, Übungen, Buchzusammenfassungen zu Personal Development und Fortschrittslogs enthalten. Reine Therapie- oder Krisenthemen gehören eher in Mentale Gesundheit.",
     "keywords": [
@@ -853,7 +853,7 @@
   },
   {
     "id": "produktivitaet",
-    "ulid": "01KC02XETHD038ENSB2AANWZHS",
+    "ulid": "01KC7K0PC5D038ENSB2AANWZHS",
     "title": "Produktivität",
     "description": "Produktivität beschreibt Effizienz, Zeitnutzung und Selbstmanagement, um mehr relevanten Output zu erzeugen. Hier geht es um Workflows, Priorisierung, Planung, Fokus, Tools und Methoden für effektiveres Arbeiten und Leben. Notizen können Systeme wie GTD, persönliche Routinen, Experimentberichte, Produktivitäts-Apps, Reviews oder Reflektionen über Leistung enthalten. Reine Wohlfühl- oder Gesundheitsaspekte ohne Leistungsbezug gehören eher zu Gesundheit oder Mentale Gesundheit.",
     "keywords": [
@@ -872,7 +872,7 @@
   },
   {
     "id": "programmiersprachen",
-    "ulid": "01KC02XETH97CD1NNRNJ6Z78SE",
+    "ulid": "01KC7K0PC597CD1NNRNJ6Z78SE",
     "title": "Programmiersprachen",
     "description": "Programmiersprachen behandelt Syntax, Paradigmen und praktische Nutzung verschiedener Coding-Languages. Inhalte sind Sprachvergleiche, Codebeispiele, Best Practices, Typensysteme, Fehlerbilder und typische Anwendungsfälle (z. B. Java, C++, Rust, Go). Notizen können Snippets, Sprachfeatures, Vor- und Nachteile und Migrationspläne enthalten. Themen, die eher Architektur oder Prozesse betreffen, gehören in Softwareentwicklung.",
     "keywords": [
@@ -887,7 +887,7 @@
   },
   {
     "id": "python",
-    "ulid": "01KC02XETH88TJ4YTH8DNDGV87",
+    "ulid": "01KC7K0PC588TJ4YTH8DNDGV87",
     "title": "Python",
     "description": "Python fokussiert auf alles, was konkret mit der Programmiersprache Python zu tun hat. Dazu zählen Skripte, Libraries, Datenanalyse, Machine Learning, Webentwicklung mit Flask oder Django, Automatisierung und Tooling. Notizen können Codebeispiele, Projektideen, Debugging-Logs, Virtual-Env-Setups, Performance-Überlegungen oder Best Practices enthalten. Allgemeine Sprachvergleiche ohne Python-Fokus gehören eher in Programmiersprachen.",
     "keywords": [
@@ -903,7 +903,7 @@
   },
   {
     "id": "reinigung",
-    "ulid": "01KC02XETH0ST552SVPJJXMKXN",
+    "ulid": "01KC7K0PC50ST552SVPJJXMKXN",
     "title": "Reinigung",
     "description": "Reinigung fokussiert auf Putzen, Sauberkeit und Hygiene im Wohnraum. Typische Inhalte sind Putzpläne, Reinigungsmittel, Oberflächenpflege, Badezimmer- und Küchenhygiene, Wäsche waschen und Frühjahrsputz. Hier gehören auch Tipps zu Fleckenentfernung, Aufräumaktionen und Routinen, um Ordnung zu halten. Nachhaltigkeitsthemen wie Zero Waste stehen nur am Rand und gehören primär in Abfallmanagement.",
     "keywords": [
@@ -918,7 +918,7 @@
   },
   {
     "id": "reisen_und_freizeit",
-    "ulid": "01KC02XETH6EJTYE2ZK00VNVVG",
+    "ulid": "01KC7K0PC56EJTYE2ZK00VNVVG",
     "title": "Reisen und Freizeit",
     "description": "Reisen und Freizeit bündelt Aktivitäten außerhalb von Arbeit und Pflicht mit Reise- oder Urlaubsbezug. Dazu gehören Urlaubsplanung, Ausflüge, Abenteuer, Tourismus, Erholung und Weltenbummeln. Notizen können Reiseideen, Bucket-Lists, Erfahrungsberichte, Kostenübersichten und Nachbereitungen vergangener Trips enthalten. Lokale Hobbys ohne Reisebezug gehören eher in Kreativität und Hobbys oder Soziales und Gemeinschaft.",
     "keywords": [
@@ -937,7 +937,7 @@
   },
   {
     "id": "reiseplanung",
-    "ulid": "01KC02XETHYAAKFF1ZBGX4K3FM",
+    "ulid": "01KC7K0PC5YAAKFF1ZBGX4K3FM",
     "title": "Reiseplanung",
     "description": "Reiseplanung fokussiert auf die Vorbereitung und Organisation von Trips. Inhalte sind Reiserouten, Buchungen, Packlisten, Visa, Impfungen, Budgetplanung und Risikoabwägungen. Notizen können konkrete Pläne, Checklisten, Vergleichstabellen, Zeitpläne und alternative Optionen enthalten. Allgemeine Erfahrungsberichte ohne Planungsaspekt gehören eher in Aktivitäten und Sehenswürdigkeiten.",
     "keywords": [
@@ -953,7 +953,7 @@
   },
   {
     "id": "schlaf",
-    "ulid": "01KC02XETHHHA762C1K3GN0BT9",
+    "ulid": "01KC7K0PC5HHA762C1K3GN0BT9",
     "title": "Schlaf",
     "description": "Schlaf umfasst alles rund um Schlafqualität, Erholung und Regeneration. Hier gehören Themen wie Schlafhygiene, Einschlafrituale, Durchschlafprobleme, Träume, Schlaflosigkeit, Müdigkeit und Optimierung der Ruhephasen hin. Notizen können Beobachtungen zu Schlafrhythmus, Tracking-Daten, Auswirkungen von Bildschirmzeit oder Stress auf den Schlaf und Experimente mit Routinen enthalten. Psychische Themen ohne expliziten Bezug zum Schlaf liegen eher bei Mentale Gesundheit.",
     "keywords": [
@@ -969,7 +969,7 @@
   },
   {
     "id": "schreiben",
-    "ulid": "01KC02XETHRXVMAFD9CND3RPE9",
+    "ulid": "01KC7K0PC5RXVMAFD9CND3RPE9",
     "title": "Schreiben",
     "description": "Schreiben umfasst kreatives und reflektierendes Schreiben jenseits von rein formalen Texten. Hier gehören Storytelling, Romane, Kurzgeschichten, Gedichte, Blogging, Tagebuch und Autorschaftsideen hin. Notizen können Plot-Skizzen, Charakterentwürfe, Schreibübungen, Textfragmente, Stil-Experimente und Journaling-Einträge enthalten. Formale Behördenbriefe oder Arbeitsmails liegen eher in Kommunikation mit Behörden bzw. Arbeit und Karriere.",
     "keywords": [
@@ -986,7 +986,7 @@
   },
   {
     "id": "schuldenmanagement",
-    "ulid": "01KC02XETHZH5J07EP75WJX64D",
+    "ulid": "01KC7K0PC5ZH5J07EP75WJX64D",
     "title": "Schuldenmanagement",
     "description": "Schuldenmanagement behandelt den Umgang mit bestehenden Verbindlichkeiten. Inhalte sind Kredite, Ratenzahlungen, Umschuldung, Tilgungspläne, Zinslast, Verhandlungen mit Gläubigern und Strategien zur Schuldenreduktion. Notizen können Tilgungspläne, Status-Updates, Alternativszenarien und persönliche Reflexionen zu Ursachen und Verhalten enthalten. Allgemeine Spar- oder Investitionsüberlegungen ohne Schuldenbezug gehören in Sparen und Investieren.",
     "keywords": [
@@ -1001,7 +1001,7 @@
   },
   {
     "id": "selbstreflexion",
-    "ulid": "01KC02XETH0JF23CNQT25G7G8P",
+    "ulid": "01KC7K0PC50JF23CNQT25G7G8P",
     "title": "Selbstreflexion",
     "description": "Selbstreflexion behandelt bewusste Innenschau und Selbsterkenntnis. Hier passen Journaling, Fragen an sich selbst, Auswertung von Erlebnissen, Stärken-/Schwächen-Analysen, Wertearbeit und Identitätsfragen hin. Notizen können Tagebucheinträge, Prompt-Listen, Auswertungen von Gesprächen, Mustererkennung und persönliche Einsichten enthalten. Reines kreatives Schreiben ohne Reflexionsfokus gehört eher in Schreiben.",
     "keywords": [
@@ -1017,7 +1017,7 @@
   },
   {
     "id": "softwareentwicklung",
-    "ulid": "01KC02XETH2088EN5PN29B58QD",
+    "ulid": "01KC7K0PC52088EN5PN29B58QD",
     "title": "Softwareentwicklung",
     "description": "Softwareentwicklung deckt den gesamten Software-Engineering-Prozess ab. Dazu gehören Architektur, Design Patterns, Testing, Debugging, Code-Reviews, Versionierung, CI/CD, Ideenausarbeitung und Wartung. Notizen können Projektarchitekturen, Refactoring-Pläne, Qualitätsstrategien, Toolchains und Lessons Learned enthalten. Themen, die primär eine bestimmte Sprache betreffen, gehören in die passende Programmiersprachen-Unterkategorie.",
     "keywords": [
@@ -1034,7 +1034,7 @@
   },
   {
     "id": "soziale_faehigkeiten",
-    "ulid": "01KC02XETH0F461G1YG9907X2G",
+    "ulid": "01KC7K0PC50F461G1YG9907X2G",
     "title": "Soziale Fähigkeiten",
     "description": "Soziale Fähigkeiten umfasst Kommunikation und zwischenmenschliche Skills. Inhalte sind Empathie, aktives Zuhören, Konfliktlösung, Verhandlung, Rhetorik, Smalltalk, Präsenz und Charisma. Notizen können Gesprächsanalysen, Übungspläne, Feedback-Auswertungen, Rollenübungen und Erkenntnisse aus Literatur oder Kursen zu Social Skills enthalten. Themen zu gesellschaftlichen Strukturen ohne persönlichen Skill-Fokus gehören eher in Soziales und Gemeinschaft oder Kultur und Gesellschaft.",
     "keywords": [
@@ -1050,7 +1050,7 @@
   },
   {
     "id": "soziale_themen",
-    "ulid": "01KC02XETH1Y9PRHKAXSGTDTCY",
+    "ulid": "01KC7K0PC51Y9PRHKAXSGTDTCY",
     "title": "Soziale Themen",
     "description": "Soziale Themen umfasst gesellschaftliche Fragestellungen und Social Issues. Inhalte sind Gerechtigkeit, Gleichberechtigung, Armut, Bildungspolitik, Diskriminierung, Migration und Sozialwissenschaften. Notizen können Artikelzusammenfassungen, Meinungsbilder, Debattenargumente, Policy-Vorschläge und Reflexionen über strukturelle Probleme enthalten. Persönliche Skills in Konfliktlösung gehören eher in Soziale Fähigkeiten.",
     "keywords": [
@@ -1065,7 +1065,7 @@
   },
   {
     "id": "soziales_und_gemeinschaft",
-    "ulid": "01KC02XETHRF3HQCRFB37JZ527",
+    "ulid": "01KC7K0PC5RF3HQCRFB37JZ527",
     "title": "Soziales und Gemeinschaft",
     "description": "Soziales und Gemeinschaft behandelt das Zusammenleben von Menschen in Gruppen, Nachbarschaften und Gesellschaft. Inhalte sind Community-Building, Integration, Inklusion, Vereine, Initiativen und bürgerschaftliches Engagement. Notizen können Projektideen, Erfahrungen mit Gruppen, lokale Initiativen, Reflexionen über Zugehörigkeit und soziale Dynamiken enthalten. Persönliche Skill-Entwicklung in Kommunikation gehört eher in Soziale Fähigkeiten.",
     "keywords": [
@@ -1084,7 +1084,7 @@
   },
   {
     "id": "sparen_und_investieren",
-    "ulid": "01KC02XETH754YV2E7WFBKGYS0",
+    "ulid": "01KC7K0PC5754YV2E7WFBKGYS0",
     "title": "Sparen und Investieren",
     "description": "Sparen und Investieren umfasst den Aufbau von Vermögen durch Rücklagen und Anlageentscheidungen. Inhalte sind Sparkonten, Aktien, ETFs, Fonds, Immobilien, Krypto, Zinsen, Dividenden und Altersvorsorge. Notizen können Strategien, Risikoprofile, Kauf-/Verkaufsentscheidungen, Portfolio-Reviews und Lessons Learned aus Marktbewegungen enthalten. Reines Ausgabenmanagement ohne Anlagefokus gehört eher in Budgetierung.",
     "keywords": [
@@ -1103,7 +1103,7 @@
   },
   {
     "id": "sport",
-    "ulid": "01KC02XETHHAVAH86F0TF3F0Y6",
+    "ulid": "01KC7K0PC5HAVAH86F0TF3F0Y6",
     "title": "Sport",
     "description": "Sport bündelt alles rund um Training, Workout und regelmäßige körperliche Bewegung. Dazu zählen Ausdauer- und Krafttraining, Cardio, verschiedene Sportarten, Wettkampfvorbereitung und persönliche Trainingspläne. Hier passen auch Reflexionen über Motivation, Fitness-Tracker, Sportequipment oder den Aufbau einer Exercise-Routine. Reine Gesundheitsfragen ohne Bezug zu Bewegung gehören eher in Gesundheit oder Ernährung.",
     "keywords": [
@@ -1120,7 +1120,7 @@
   },
   {
     "id": "steuern",
-    "ulid": "01KC02XETHJADHFG3HTZWRZPSW",
+    "ulid": "01KC7K0PC5JADHFG3HTZWRZPSW",
     "title": "Steuern",
     "description": "Steuern umfasst Steuererklärung, Steuerplanung und Interaktion mit dem Finanzamt. Inhalte sind absetzbare Ausgaben, Steuervorteile, Steuerrecht, Fristen, ELSTER, Belege und Kommunikation mit Behörden zum Thema taxes. Notizen können Checklisten, Fallbeispiele, Vorbereitungsunterlagen, Rückfragen an Steuerberater und Auswertungen von Bescheiden enthalten. Allgemeine Finanzplanung ohne Steuerfokus gehört eher in Finanzen und Investitionen.",
     "keywords": [
@@ -1136,7 +1136,7 @@
   },
   {
     "id": "stressmanagement",
-    "ulid": "01KC02XETHQ5D8WTZ0QHB66863",
+    "ulid": "01KC7K0PC5Q5D8WTZ0QHB66863",
     "title": "Stressmanagement",
     "description": "Stressmanagement fokussiert auf den konkreten Umgang mit Stress im Alltag. Dazu zählen Entspannungstechniken, Coping-Strategien, Atemübungen, Meditation, Pausenplanung und Work-Life-Balance. Hier passen Notizen über Stressoren, persönliche Trigger, Experimente mit neuen Routinen, Retreats oder Apps zur Stressreduktion. Allgemeine psychische Themen ohne Fokus auf praktische Stressbewältigung gehören eher in Mentale Gesundheit.",
     "keywords": [
@@ -1151,7 +1151,7 @@
   },
   {
     "id": "studientechniken",
-    "ulid": "01KC02XETH64M1Y1YBW2A5Q3NZ",
+    "ulid": "01KC7K0PC564M1Y1YBW2A5Q3NZ",
     "title": "Studientechniken",
     "description": "Studientechniken fokussieren auf Methoden, wie man effizienter lernt. Dazu zählen Lernmethoden, Memorization-Techniken, Spaced Repetition, Lernpläne, Prüfungsvorbereitung, Notiztechniken und Gedächtnistraining. Hier passen detaillierte Beschreibungen von eigenen Lern-Experimenten, Auswertung von Ergebnissen und Adaptionen klassischer Methoden. Allgemeine Inhalte zu Kursen oder Themen ohne methodischen Fokus gehören eher in Online-Kurse und Ressourcen oder die jeweilige Fachkategorie.",
     "keywords": [
@@ -1166,7 +1166,7 @@
   },
   {
     "id": "technische_trends",
-    "ulid": "01KC02XETHCADKT73298MYPPXQ",
+    "ulid": "01KC7K0PC5CADKT73298MYPPXQ",
     "title": "Technische Trends",
     "description": "Technische Trends umfasst neue Technologien, Innovationen und Zukunftsthemen in der Tech-Welt. Dazu zählen KI/AI, Blockchain, IoT, neue Gadgets, Frameworks, Tools und sich abzeichnende Paradigmenwechsel. Notizen können Trendanalysen, erste Experimente, Einschätzungen zu Reifegrad, Chancen/Risiken und mögliche Anwendungsfelder enthalten. Detailierte Implementierungen im Alltag gehören eher in die jeweilige Fachkategorie (z. B. KI in Softwareentwicklung).",
     "keywords": [
@@ -1183,7 +1183,7 @@
   },
   {
     "id": "technologie_und_programmierung",
-    "ulid": "01KC02XETH1EBX1PX2H8JY35TT",
+    "ulid": "01KC7K0PC51EBX1PX2H8JY35TT",
     "title": "Technologie und Programmierung",
     "description": "Technologie und Programmierung bündelt IT, Softwareentwicklung, Computertechnik und digitale Tools. Hier geht es um Coding, Tech-Trends, Hardware, Betriebssysteme, Infrastruktur und Digitalisierungsfragen. Notizen können Architekturen, Toolvergleiche, Troubleshooting, Setup-Anleitungen und Reflexionen über Technologiewahl enthalten. Reine Produktivitäts- oder Lernmethoden ohne Tech-Fokus gehören (auch wenn Tools genutzt werden) eher in Produktivität oder Lernen und Bildung.",
     "keywords": [
@@ -1202,7 +1202,7 @@
   },
   {
     "id": "termine_und_fristen",
-    "ulid": "01KC02XETHV65TS69JGAH5GC9A",
+    "ulid": "01KC7K0PC5V65TS69JGAH5GC9A",
     "title": "Termine und Fristen",
     "description": "Termine und Fristen fokussiert auf zeitkritische Verwaltungs- und Pflichttermine. Inhalte sind Abgabefristen, Steuertermine, Wiedervorlagen, Erinnerungen und Kalenderorganisation für amtliche oder formale Vorgänge. Notizen können Fristenlisten, Reminder-Setups, Wiederholrhythmen und Zusammenstellungen aller wichtigen Termine enthalten. Allgemeine Zeitplanung ohne Behörden- oder Pflichtbezug gehört eher in Zeitmanagement.",
     "keywords": [
@@ -1218,7 +1218,7 @@
   },
   {
     "id": "typescript",
-    "ulid": "01KC02XETHZEETGRDXQ24NSWGZ",
+    "ulid": "01KC7K0PC5ZEETGRDXQ24NSWGZ",
     "title": "TypeScript",
     "description": "TypeScript behandelt typisiertes JavaScript und seine Nutzung im Webdevelopment. Hier geht es um Typsystem, Interfaces, Generics, Refactoring mit TS, Integration in Frameworks wie React, Angular oder Vue und Build-Konfiguration. Notizen können Migration von JS zu TS, Fehlerdiagnose durch den Compiler, Pattern für saubere Typen und Erfahrungen mit DX enthalten. Reine JS-spezifische Laufzeitthemen ohne Typenbezug gehören eher in JavaScript.",
     "keywords": [
@@ -1233,7 +1233,7 @@
   },
   {
     "id": "umwelt_und_nachhaltigkeit",
-    "ulid": "01KC02XETH5VFM23MEAGFRSK6G",
+    "ulid": "01KC7K0PC55VFM23MEAGFRSK6G",
     "title": "Umwelt und Nachhaltigkeit",
     "description": "Umwelt und Nachhaltigkeit bündelt Themen rund um Ökologie, Klimawandel, Ressourcenschonung und umweltbewusstes Leben. Inhalte sind Umweltschutz, Naturschutz, CO₂-Fußabdruck, Konsumkritik und gesellschaftliche Nachhaltigkeitsdebatten. Notizen können persönliche Strategien, Projektideen, politische Einschätzungen und Alltagsanpassungen enthalten. Wenn der Fokus auf konkreten Haushaltspraktiken liegt, kann die Zuordnung zu Energieeffizienz oder Abfallmanagement sinnvoller sein.",
     "keywords": [
@@ -1251,7 +1251,7 @@
   },
   {
     "id": "unterkuenfte_und_transport",
-    "ulid": "01KC02XETHQ7AEG2ATTH96M95A",
+    "ulid": "01KC7K0PC5Q7AEG2ATTH96M95A",
     "title": "Unterkünfte und Transport",
     "description": "Unterkünfte und Transport behandelt die praktische Logistik einer Reise. Dazu zählen Hotels, Hostels, Airbnb, Züge, Flüge, Mietwagen, ÖPNV und Transfers. Notizen können Preisvergleiche, Buchungsdaten, Erfahrungsberichte zu Anbietern, Sitzplatz- oder Zimmerpräferenzen und Tipps zur Anreise enthalten. Strategische Gesamtplanung des Urlaubs gehört eher in Reiseplanung.",
     "keywords": [
@@ -1269,7 +1269,7 @@
   },
   {
     "id": "veranstaltungen_und_treffen",
-    "ulid": "01KC02XETHTMJQSSPKG79QAK3C",
+    "ulid": "01KC7K0PC5TMJQSSPKG79QAK3C",
     "title": "Veranstaltungen und Treffen",
     "description": "Veranstaltungen und Treffen umfasst Events mit sozialem Charakter. Inhalte sind Partys, Feiern, Meetups, Konferenzen, Workshops, Stammtische und Community-Treffen. Notizen können Event-Ideen, Agenda-Entwürfe, Teilnehmerlisten, Nachberichte, Feedback und Learnings enthalten. Wenn der Fokus auf fachlichem Inhalt eines Events liegt (z. B. Tech-Konferenz), gehört dieser eher in die passende Themenkategorie.",
     "keywords": [
@@ -1285,7 +1285,7 @@
   },
   {
     "id": "versicherungen",
-    "ulid": "01KC02XETHZG7V6NCYKRP8CNY6",
+    "ulid": "01KC7K0PC5ZG7V6NCYKRP8CNY6",
     "title": "Versicherungen",
     "description": "Versicherungen umfasst Auswahl, Verwaltung und Nutzung von Versicherungsverträgen. Inhalte sind Policen, Tarife, Deckungsumfang, Schadensfälle, Risikoabwägungen, Kündigungen und Neuabschlüsse. Notizen können Vertragsübersichten, Leistungsfälle, Vergleichsnotizen, Beratungsergebnisse und eigene Kriterien für Versicherungsentscheidungen enthalten. Allgemeine finanzielle Rücklagen ohne Versicherungsbezug gehören eher in Sparen und Investieren.",
     "keywords": [
@@ -1301,7 +1301,7 @@
   },
   {
     "id": "wartung",
-    "ulid": "01KC02XETHA6SRY8E4NA4AS0CH",
+    "ulid": "01KC7K0PC5A6SRY8E4NA4AS0CH",
     "title": "Wartung",
     "description": "Wartung umfasst die Instandhaltung von Haus, Wohnung und Geräten. Dazu zählen Reparaturen, Heimwerken, Renovierungsarbeiten, Werkzeugnutzung, Gerätepflege, Wartungsintervalle und Inspektionen. Notizen können Anleitungen, Materiallisten, Projektpläne, Erfahrungsberichte zu Handwerksprojekten oder Kontakte zu Handwerkern enthalten. Kreative DIY-Projekte ohne klaren Instandhaltungsfokus gehören eher in Makerspace und DIY.",
     "keywords": [
@@ -1317,7 +1317,7 @@
   },
   {
     "id": "wissensverwaltung",
-    "ulid": "01KC02XETH693YBEA9JENGGQJR",
+    "ulid": "01KC7K0PC5693YBEA9JENGGQJR",
     "title": "Wissensverwaltung",
     "description": "Wissensverwaltung behandelt Systeme und Strukturen, um Informationen langfristig nutzbar zu machen. Dazu gehören PKM, Zettelkasten, Notizsysteme, Wissensdatenbanken, Tagging, Archivierung und Retrieval-Strategien. Notizen können Datenbank- oder Markdown-Strukturen, Graph-Ansätze, Tools, Workflows, Import-/Exportstrategien und Evaluierungen von Knowledge-Management-Setups enthalten. Reine Lernziele oder Kursinhalte ohne Systembezug gehören eher in Lernen und Bildung allgemein.",
     "keywords": [
@@ -1332,7 +1332,7 @@
   },
   {
     "id": "zeitmanagement",
-    "ulid": "01KC02XETHRGA5S600GADG9AS9",
+    "ulid": "01KC7K0PC5RGA5S600GADG9AS9",
     "title": "Zeitmanagement",
     "description": "Zeitmanagement fokussiert darauf, wie Termine, Aufgaben und verfügbare Stunden geplant und genutzt werden. Typische Inhalte sind Kalenderführung, Priorisierung, Time-Blocking, Umgang mit Deadlines, Zeitfresser-Analysen und langfristige Planung. Hier passen Notizen zu Tages- und Wochenplänen, Reviews, Tools wie Kalender-Apps oder Timetracker und Strategien für bessere Balance. Inhalte ohne expliziten Zeitbezug, die nur Organisation oder Inhalte betreffen, gehören eher in Aufgabenverwaltung oder Wissensverwaltung.",
     "keywords": [
@@ -1347,7 +1347,7 @@
   },
   {
     "id": "zielsetzung_und_motivation",
-    "ulid": "01KC02XETHA07H1Q6RZ372HH51",
+    "ulid": "01KC7K0PC5A07H1Q6RZ372HH51",
     "title": "Zielsetzung und Motivation",
     "description": "Zielsetzung und Motivation fokussiert auf das Definieren und Erreichen von Zielen. Inhalte sind Visionen, SMART-Ziele, Habit-Building, Disziplin, Motivationstrigger, Rückschläge und Review-Routinen. Notizen können Jahres- und Quartalsziele, Tracking-Tabellen, Belohnungssysteme und Reflexionen über Motivationseinbrüche enthalten. Wenn Ziele primär finanziell oder karrierebezogen sind, können Querverweise zu Finanzen und Investitionen oder Arbeit und Karriere sinnvoll sein.",
     "keywords": [

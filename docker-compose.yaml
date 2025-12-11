@@ -1,0 +1,52 @@
+services:
+  # ---------------------------------------------------------
+  # Service 1: Das LLM (z.B. Llama-3, Mistral)
+  # ---------------------------------------------------------
+  llm-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    # Falls das offizielle Vulkan Image hakt, muss man es oft selbst bauen.
+    # Alternativ "server-cuda" für Nvidia nutzen oder "server" für CPU.
+    container_name: llama-cpp-llm
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri   # Zugriff auf Vulkan/GPU
+      # - /dev/kfd:/dev/kfd # Optional: Für AMD ROCm/HSA falls benötigt
+    volumes:
+      - /var/home/t0bybr/huggingface/models:/models:z    # Hier liegen deine .gguf Dateien
+    environment:
+      # Performance Tuning für Vulkan
+      - GGML_VULKAN_DEVICE=0
+    ports:
+      - 8100:8080
+    command: >
+      -m /models/Qwen3-VL-4B-Thinking-Q4_K_M.gguf
+      -c 4096
+      -ngl 99              
+      --timeout 30         
+      --cont-batching
+      --chat-template-kwargs '{"enable_thinking":false, "temperature":0.5}'
+      --top_p 0.9
+
+  # ---------------------------------------------------------
+  # Service 2: Jina Embeddings v3
+  # ---------------------------------------------------------
+  embed-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama-cpp-embed
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /var/home/t0bybr/huggingface/models:/models:z    # Hier liegen deine .gguf Dateien
+    environment:
+      - GGML_VULKAN_DEVICE=0
+    ports:
+      - 8200:8080
+    command: >
+      -m /models/jina-embeddings-v3-Q4_K_M.gguf
+      --embedding          
+      -c 8192              
+      -ngl 99              
+      -ub 8192
+      --pooling mean       
+      --timeout 30

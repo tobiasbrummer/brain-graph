@@ -17,3 +17,5 @@ dist/
 .claude/
 PoC/
 test_data/
+vault/
+.brain_graph/data/

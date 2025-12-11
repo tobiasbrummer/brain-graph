@@ -9,11 +9,12 @@ Handles:
 """
 
 import hashlib
+import json
 import re
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 
 def slugify(text: str) -> str:
@@ -77,11 +78,11 @@ def generate_ulid(content: str = "", timestamp: Optional[datetime] = None) -> st
     # Randomness component (80 bits = 16 base32 chars)
     if content:
         # Deterministic: use SHA1 hash of content
-        hash_bytes = hashlib.sha1(content.encode('utf-8')).digest()[:10]
+        hash_bytes = hashlib.sha1(content.encode('utf-8')).digest()[:16]
     else:
         # Random: use urandom
         import os
-        hash_bytes = os.urandom(10)
+        hash_bytes = os.urandom(16)
 
     # Encode randomness
     random_encoded = ""
@@ -186,12 +187,20 @@ def get_output_paths(
         Dict with keys: embeddings, nodes, edges, ner_nodes, ner_edges, meta
     """
     # Generate filename base
-    slug = slugify(md_path.stem)
+    # Remove ULID suffix if already present (e.g., from vault filename)
+    stem = md_path.stem
+    stem = re.sub(r'-[A-Z0-9]{6}$', '', stem, flags=re.IGNORECASE)
+    slug = slugify(stem)
     ulid_suffix = ulid[-6:]  # Last 6 chars of ULID
     filename_base = f"{slug}-{ulid_suffix}"
 
-    # Month folder
-    month = get_month_folder()
+    # Month folder - extract from path if vault/YYYY-MM/ structure
+    # Otherwise use current month (fallback for non-vault files)
+    parent_name = md_path.parent.name
+    if re.match(r'^\d{4}-\d{2}$', parent_name):
+        month = parent_name
+    else:
+        month = get_month_folder()
 
     # Paths
     paths = {
@@ -240,3 +249,116 @@ def get_or_generate_ulid(md_path: Path, content: str = "") -> str:
     inject_ulid_into_md(md_path, ulid)
 
     return ulid
+
+
+def get_source_hash(file_path: Path) -> str:
+    """
+    Calculate SHA256 hash of source file.
+
+    Args:
+        file_path: Path to file
+
+    Returns:
+        Hash string in format "sha256:abc123..." (first 16 chars)
+    """
+    content = file_path.read_bytes()
+    hash_digest = hashlib.sha256(content).hexdigest()[:16]
+    return f"sha256:{hash_digest}"
+
+
+def get_source_version(file_path: Path) -> dict[str, Any]:
+    """
+    Get git commit info for source file.
+
+    Args:
+        file_path: Path to source file
+
+    Returns:
+        Dict with keys:
+        - source_commit: short hash of last commit that changed file (or None)
+        - source_commit_date: ISO timestamp of commit (or None)
+        - source_dirty: True if file has uncommitted changes
+    """
+    import subprocess
+
+    result = {
+        "source_commit": None,
+        "source_commit_date": None,
+        "source_dirty": False
+    }
+
+    try:
+        # Letzter commit der die Datei änderte
+        commit = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--", str(file_path)],
+            capture_output=True, text=True, check=True, cwd=file_path.parent
+        ).stdout.strip()
+
+        if commit:
+            commit_date = subprocess.run(
+                ["git", "log", "-1", "--format=%aI", "--", str(file_path)],
+                capture_output=True, text=True, check=True, cwd=file_path.parent
+            ).stdout.strip()
+
+            # Check uncommitted changes
+            status = subprocess.run(
+                ["git", "status", "--porcelain", str(file_path)],
+                capture_output=True, text=True, check=True, cwd=file_path.parent
+            ).stdout.strip()
+
+            result["source_commit"] = commit[:8]  # short hash
+            result["source_commit_date"] = commit_date
+            result["source_dirty"] = bool(status)
+
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Kein git repo oder Datei nicht in git - ist ok
+        pass
+
+    return result
+
+
+def update_meta(meta_path: Path, step_data: dict[str, Any]) -> None:
+    """
+    Update meta.json with processing step.
+
+    Args:
+        meta_path: Path to meta.json
+        step_data: Dict with step information (must contain 'step' key)
+                  Common fields: step, completed, timestamp, ...
+
+    Example:
+        update_meta(output_paths['meta'], {
+            'step': 'chunking',
+            'chunk_count': 42,
+            'section_count': 5
+        })
+    """
+    # Load existing meta or create new
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    else:
+        meta = {"processing_steps": []}
+
+    # Update modified timestamp
+    now = datetime.now(timezone.utc)
+    meta["modified_at"] = now.isoformat()
+
+    # Add timestamp to step_data if not present
+    if "timestamp" not in step_data:
+        step_data["timestamp"] = now.isoformat()
+
+    # Ensure completed flag exists
+    if "completed" not in step_data:
+        step_data["completed"] = True
+
+    # Append step
+    meta["processing_steps"].append(step_data)
+
+    # Create directory if needed
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write back
+    meta_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )

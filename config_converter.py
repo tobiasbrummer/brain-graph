@@ -81,9 +81,9 @@ def flatten_config(nested: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
 def main():
     parser = argparse.ArgumentParser(description="Convert config.md to config.json")
-    parser.add_argument("--input", type=Path, default=Path("config.md"),
+    parser.add_argument("--input", type=Path, default=Path("config/config.md"),
                         help="Input config.md")
-    parser.add_argument("--output", type=Path, default=Path("config.json"),
+    parser.add_argument("--output", type=Path, default=Path(".brain_graph/config/config.json"),
                         help="Output config.json")
     args = parser.parse_args()
 

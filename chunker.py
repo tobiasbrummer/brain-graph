@@ -29,7 +29,9 @@ from file_utils import (
     get_or_generate_ulid,
     get_output_paths,
     ensure_output_dirs,
-    get_month_folder
+    get_month_folder,
+    get_source_hash,
+    get_source_version
 )
 
 # -----------------------------------------------------------------------------
@@ -705,6 +707,12 @@ def main():
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
     parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
                         help="Base output directory (default: .brain_graph/data)")
+    parser.add_argument("--vault-dir", type=Path, default=Path("vault"),
+                        help="Vault directory for permanent storage (default: vault)")
+    parser.add_argument("--delete-source", action="store_true",
+                        help="Delete source file after processing (default: keep)")
+    parser.add_argument("--force", action="store_true",
+                        help="Force processing even if vault file unchanged")
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -721,8 +729,45 @@ def main():
     doc_ulid = get_or_generate_ulid(args.input, text)
     print(f"Document ULID: {doc_ulid}", file=sys.stderr)
 
-    # Output-Pfade generieren
-    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+    # Vault-Pfad generieren und Datei kopieren
+    from file_utils import get_month_folder, slugify
+    month = get_month_folder()
+    slug = slugify(args.input.stem)
+    ulid_suffix = doc_ulid[-6:]
+    vault_filename = f"{slug}-{ulid_suffix}.md"
+    vault_path = args.vault_dir / month / vault_filename
+
+    # Vault-Verzeichnis erstellen
+    vault_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Skip-Logik: Wenn vault existiert und hash gleich
+    vault_unchanged = False
+    if vault_path.exists() and not args.force:
+        vault_hash = get_source_hash(vault_path)
+        input_hash = get_source_hash(args.input)
+
+        if vault_hash == input_hash:
+            print(f"✓ Vault file unchanged, skipping copy", file=sys.stderr)
+            vault_unchanged = True
+        else:
+            print(f"✎ Vault file changed, updating...", file=sys.stderr)
+
+    # Datei nach vault kopieren (mit aktualisierter ULID)
+    if not vault_unchanged:
+        import shutil
+        shutil.copy2(args.input, vault_path)
+        print(f"Copied to vault: {vault_path}", file=sys.stderr)
+
+    # Optional: Originaldatei löschen
+    if args.delete_source:
+        args.input.unlink()
+        print(f"Deleted source: {args.input}", file=sys.stderr)
+
+    # Ab jetzt mit vault-Datei arbeiten
+    working_file = vault_path
+
+    # Output-Pfade basierend auf vault-Datei generieren
+    output_paths = get_output_paths(working_file, doc_ulid, args.base_dir)
     ensure_output_dirs(output_paths)
 
     # Blocks parsen
@@ -756,9 +801,19 @@ def main():
 
     # meta.json erstellen
     now = datetime.now(timezone.utc)
+
+    # Source hash und git version
+    source_hash = get_source_hash(vault_path)
+    git_info = get_source_version(vault_path)
+
     meta = {
-        "source_file": args.input.name,
+        "source_file": str(vault_path),  # Vault-Pfad als canonical source
+        "original_source": str(args.input) if args.input != vault_path else None,
         "ulid": doc_ulid,
+        "source_hash": source_hash,
+        "source_commit": git_info["source_commit"],
+        "source_commit_date": git_info["source_commit_date"],
+        "source_dirty": git_info["source_dirty"],
         "created_at": now.isoformat(),
         "modified_at": now.isoformat(),
         "uses": 1,

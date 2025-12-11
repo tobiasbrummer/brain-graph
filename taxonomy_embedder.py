@@ -119,11 +119,11 @@ def save_parquet(
 
 def main():
     parser = argparse.ArgumentParser(description="Embed taxonomy categories")
-    parser.add_argument("-i", "--input", type=Path, default=Path("taxonomy.nodes.json"),
+    parser.add_argument("-i", "--input", type=Path, default=Path(".brain_graph/config/taxonomy.md.nodes.json"),
                         help="Input taxonomy nodes.json")
-    parser.add_argument("-o", "--output", type=Path, default=Path("taxonomy.parquet"),
+    parser.add_argument("-o", "--output", type=Path, default=Path(".brain_graph/config/taxonomy.md.parquet"),
                         help="Output Parquet file")
-    parser.add_argument("-c", "--config", type=Path, help="config.json path")
+    parser.add_argument("-c", "--config", type=Path, help="config.json path", default=Path(".brain_graph/config/config.json"))
     args = parser.parse_args()
 
     if not args.input.exists():

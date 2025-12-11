@@ -21,7 +21,8 @@ import pyarrow.parquet as pq
 
 from file_utils import (
     extract_ulid_from_md,
-    get_output_paths
+    get_output_paths,
+    update_meta
 )
 
 
@@ -201,11 +202,11 @@ def apply_categories(
 def main():
     parser = argparse.ArgumentParser(description="Match chunks to taxonomy via embeddings")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
-    parser.add_argument("-t", "--taxonomy", type=Path, default=Path("data/taxonomy.parquet"),
+    parser.add_argument("-t", "--taxonomy", type=Path, default=Path(".brain_graph/config/taxonomy.md.parquet"),
                         help="Taxonomy embeddings parquet")
     parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
                         help="Base data directory")
-    parser.add_argument("--top-n", type=int, default=2,
+    parser.add_argument("--top-n", type=int, default=3,
                         help="Max categories per chunk")
     parser.add_argument("--min-similarity", type=float, default=0.499,
                         help="Minimum similarity threshold")
@@ -297,17 +298,8 @@ def main():
     print(f"Updated {output_paths['edges']} ({len(category_edges)} category edges)", file=sys.stderr)
 
     # Update meta.json
-    if output_paths['meta'].exists():
-        meta = json.loads(output_paths['meta'].read_text(encoding="utf-8"))
-    else:
-        meta = {"processing_steps": []}
-
-    now = datetime.now(timezone.utc)
-    meta["modified_at"] = now.isoformat()
-    meta["processing_steps"].append({
+    update_meta(output_paths['meta'], {
         "step": "taxonomy_matching",
-        "completed": True,
-        "timestamp": now.isoformat(),
         "classified_chunks": classified,
         "total_assignments": total_assignments,
         "parameters": {
@@ -316,11 +308,6 @@ def main():
             "max_gap": args.max_gap
         }
     })
-
-    output_paths['meta'].write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
     print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 

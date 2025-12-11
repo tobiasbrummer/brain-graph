@@ -6,16 +6,23 @@ Nimmt Embedding-Ergebnisse und lässt ein LLM die Kategorien überprüfen.
 Entfernt False Positives und kann fehlende Kategorien ergänzen.
 
 Usage:
-    python llm_verifier.py -n nodes.json -s source.md -t taxonomy.nodes.json
+    python llm_verifier.py -i vault/YYYY-MM/file.md
 """
 
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from openai import OpenAI
+
+from file_utils import (
+    extract_ulid_from_md,
+    get_output_paths,
+    update_meta
+)
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
@@ -195,21 +202,30 @@ def apply_verified_categories(
 
 def main():
     parser = argparse.ArgumentParser(description="Verify embedding-based categories via LLM")
-    parser.add_argument("-n", "--nodes", type=Path, required=True, help="Input nodes.json (with categories)")
-    parser.add_argument("-s", "--source", type=Path, required=True, help="Source markdown file")
-    parser.add_argument("-t", "--taxonomy", type=Path, default=Path("taxonomy.nodes.json"),
+    parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
+    parser.add_argument("-t", "--taxonomy", type=Path, default=Path(".brain_graph/config/taxonomy.md.nodes.json"),
                         help="Taxonomy nodes.json")
-    parser.add_argument("-o", "--output-prefix", type=Path,
-                        help="Output prefix (default: same as nodes)")
-    parser.add_argument("-c", "--config", type=Path, help="config.json path")
+    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
+                        help="Base data directory")
+    parser.add_argument("-c", "--config", type=Path, help="config.json path", default=Path(".brain_graph/config/config.json"))
     args = parser.parse_args()
 
-    if not args.nodes.exists():
-        print(f"Error: Nodes file not found: {args.nodes}", file=sys.stderr)
+    if not args.input.exists():
+        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    if not args.source.exists():
-        print(f"Error: Source file not found: {args.source}", file=sys.stderr)
+    # ULID extrahieren
+    doc_ulid = extract_ulid_from_md(args.input)
+    if not doc_ulid:
+        print(f"Error: No ULID found in {args.input}", file=sys.stderr)
+        sys.exit(1)
+
+    # Pfade ermitteln
+    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+
+    if not output_paths['nodes'].exists():
+        print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
+        print("Run chunker.py and taxonomy_matcher.py first.", file=sys.stderr)
         sys.exit(1)
 
     if not args.taxonomy.exists():
@@ -227,22 +243,25 @@ def main():
 
     # Lade Daten
     print("Loading data...", file=sys.stderr)
-    nodes = json.loads(args.nodes.read_text(encoding="utf-8"))
+    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
     categories = json.loads(args.taxonomy.read_text(encoding="utf-8"))
 
     # Lade Edges
-    edges_path = args.nodes.parent / args.nodes.name.replace(".nodes.json", ".edges.json")
     edges = []
-    if edges_path.exists():
-        edges = json.loads(edges_path.read_text(encoding="utf-8"))
+    if output_paths['edges'].exists():
+        edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
 
     print(f"Loaded {len(nodes)} nodes, {len(categories)} categories", file=sys.stderr)
 
     # Sammle Chunks mit Kategorien
     chunks_with_categories = []
     for node in nodes:
-        if node.get("type") == "chunk" and "categories" in node:
+        if node.get("type") == "chunk" and node.get("categories"):
             chunks_with_categories.append((node["id"], node["categories"]))
+
+    if not chunks_with_categories:
+        print("Warning: No chunks with categories found. Run taxonomy_matcher.py first.", file=sys.stderr)
+        sys.exit(0)
 
     print(f"Found {len(chunks_with_categories)} chunks with categories", file=sys.stderr)
 
@@ -254,7 +273,7 @@ def main():
         print(f"  {i}/{len(chunks_with_categories)}: {chunk_id} ({len(current_cats)} cats)", file=sys.stderr)
 
         # Extrahiere Text
-        text = extract_chunk_text(chunk_id, args.source, nodes, edges)
+        text = extract_chunk_text(chunk_id, args.input, nodes, edges)
         if not text:
             print(f"    Warning: No text for {chunk_id}", file=sys.stderr)
             verified_categories[chunk_id] = current_cats
@@ -267,7 +286,6 @@ def main():
             removed = set(current_cats) - set(verified)
             print(f"    Removed: {removed}", file=sys.stderr)
 
-        # Immer hinzufügen, auch wenn leer (alle Kategorien entfernt)
         verified_categories[chunk_id] = verified
 
     print(f"Verified {len(verified_categories)} chunks", file=sys.stderr)
@@ -281,20 +299,39 @@ def main():
     print(f"Verified: {verified_count} assignments", file=sys.stderr)
     print(f"Removed: {removed_count} false positives", file=sys.stderr)
 
-    # Apply verified categories
+    # Apply verified categories (in-place update)
     updated_nodes, category_edges = apply_verified_categories(nodes, verified_categories)
 
-    # Output
-    output_prefix = args.output_prefix or args.nodes.stem
+    # Schreibe nodes.json zurück
+    output_paths['nodes'].write_text(
+        json.dumps(updated_nodes, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    print(f"Updated {output_paths['nodes']}", file=sys.stderr)
 
-    nodes_out = Path(f"{output_prefix}.verified.nodes.json")
-    edges_out = Path(f"{output_prefix}.verified.category-edges.json")
+    # Merge category-edges in edges.json (remove old, add new)
+    if output_paths['edges'].exists():
+        existing_edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
+        existing_edges = [e for e in existing_edges if e.get('type') != 'categorized_as']
+        existing_edges.extend(category_edges)
+    else:
+        existing_edges = category_edges
 
-    nodes_out.write_text(json.dumps(updated_nodes, ensure_ascii=False, indent=2), encoding="utf-8")
-    edges_out.write_text(json.dumps(category_edges, ensure_ascii=False, indent=2), encoding="utf-8")
+    output_paths['edges'].write_text(
+        json.dumps(existing_edges, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    print(f"Updated {output_paths['edges']}", file=sys.stderr)
 
-    print(f"Written {nodes_out}", file=sys.stderr)
-    print(f"Written {edges_out}", file=sys.stderr)
+    # Update meta.json
+    update_meta(output_paths['meta'], {
+        "step": "llm_verification",
+        "original_assignments": original_count,
+        "verified_assignments": verified_count,
+        "removed_false_positives": removed_count,
+        "model": config["summary_model"]
+    })
+    print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 
 if __name__ == "__main__":

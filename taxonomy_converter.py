@@ -207,9 +207,9 @@ def build_graph(raw_nodes: List[Dict[str, Any]]) -> tuple[List[Dict], List[Dict]
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default="taxonomy.md")
-    ap.add_argument("--output-nodes", default="taxonomy.nodes.json")
-    ap.add_argument("--output-edges", default="taxonomy.edges.json")
+    ap.add_argument("--input", default="config/taxonomy.md")
+    ap.add_argument("--output-nodes", default=".brain_graph/config/taxonomy.md.nodes.json")
+    ap.add_argument("--output-edges", default=".brain_graph/config/taxonomy.md.edges.json")
     args = ap.parse_args()
 
     text = pathlib.Path(args.input).read_text(encoding="utf-8")

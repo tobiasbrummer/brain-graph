@@ -27,7 +27,7 @@ def test_database_structure(con: duckdb.DuckDBPyConnection):
     required_tables = [
         'nodes', 'edges',
         'chunk_embeddings_256d', 'taxonomy_embeddings_256d',
-        'embedding_sources'
+        'embedding_sources', 'meta'
     ]
 
     print("Tables:")
@@ -201,6 +201,52 @@ def test_metadata_filtering(con: duckdb.DuckDBPyConnection):
                 print(f"  {cat}: {count} chunks")
 
 
+def test_meta_table(con: duckdb.DuckDBPyConnection):
+    """Test meta table for deduplication."""
+    print("\n=== Testing Meta Table ===\n")
+
+    # Count meta entries
+    count = con.execute("SELECT COUNT(*) FROM meta").fetchone()[0]
+    print(f"Meta entries: {count}")
+
+    if count > 0:
+        # Show sample meta data
+        result = con.execute("""
+            SELECT
+                ulid,
+                source_file,
+                source_hash,
+                source_commit,
+                source_dirty,
+                created_at
+            FROM meta
+            LIMIT 3
+        """).fetchall()
+
+        print("\nSample meta entries:")
+        for i, (ulid, file, hash, commit, dirty, created) in enumerate(result, 1):
+            print(f"\n  {i}. ULID: {ulid}")
+            print(f"     File: {file}")
+            print(f"     Hash: {hash}")
+            if commit:
+                print(f"     Commit: {commit}")
+            print(f"     Dirty: {dirty}")
+            print(f"     Created: {created}")
+
+        # Test hash lookup (for deduplication)
+        sample_hash = result[0][2] if result else None
+        if sample_hash:
+            dup_check = con.execute("""
+                SELECT ulid, source_file
+                FROM meta
+                WHERE source_hash = ?
+            """, [sample_hash]).fetchone()
+
+            print(f"\nHash lookup test (for dedup):")
+            print(f"  Query hash: {sample_hash}")
+            print(f"  Found: {dup_check[1] if dup_check else 'None'}")
+
+
 def main():
     if len(sys.argv) > 1:
         # Test existing database
@@ -209,9 +255,10 @@ def main():
         con = duckdb.connect(db_path)
     else:
         # Build in-memory database
-        print("Building in-memory database from test_data/output...")
+        data_dir = Path(".brain_graph/data")
+        print(f"Building in-memory database from {data_dir}...")
         db = BrainGraphDB(":memory:")
-        db.import_directory(Path("test_data/output"))
+        db.import_directory(data_dir)
         db.build_indexes()
         con = db.con
 
@@ -219,6 +266,7 @@ def main():
     try:
         test_database_structure(con)
         test_node_counts(con)
+        test_meta_table(con)
         test_semantic_search(con)
         test_fulltext_search(con)
         test_graph_queries(con)

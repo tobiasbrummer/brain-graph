@@ -6,7 +6,7 @@ Lädt Chunks, extrahiert Entities (Personen, Orte, Organisationen),
 erstellt Entity-Nodes und Edges.
 
 Usage:
-    python ner_extractor.py -n nodes.json -s source.md -o output_prefix
+    python ner_extractor.py -i vault/YYYY-MM/file.md
 """
 
 import argparse
@@ -19,18 +19,13 @@ from pathlib import Path
 from typing import Any
 
 import spacy
-import ulid
 
-
-# Timestamp für deterministische ULIDs
-RUN_TS = datetime.now(timezone.utc)
-RUN_TS_BYTES = int(RUN_TS.timestamp() * 1000).to_bytes(6, "big")
-
-
-def make_ulid(text: str) -> str:
-    """Deterministische ULID aus Text."""
-    digest = hashlib.sha1(text.encode("utf-8")).digest()
-    return str(ulid.from_bytes(RUN_TS_BYTES + digest[:10]))
+from file_utils import (
+    extract_ulid_from_md,
+    generate_ulid,
+    get_output_paths,
+    update_meta
+)
 
 
 def detect_language(nodes: list[dict[str, Any]]) -> str:
@@ -253,7 +248,7 @@ def create_entity_nodes(
 
         node = {
             "id": entity_id,
-            "ulid": make_ulid(entity_id),
+            "ulid": generate_ulid(entity_id),
             "type": "entity",
             "entity_type": data["type"],
             "text": data["text"],
@@ -313,28 +308,37 @@ def print_statistics(
 
 def main():
     parser = argparse.ArgumentParser(description="Extract named entities from chunks")
-    parser.add_argument("-n", "--nodes", type=Path, required=True, help="Input nodes.json")
-    parser.add_argument("-s", "--source", type=Path, required=True, help="Source markdown file")
-    parser.add_argument("-o", "--output-prefix", type=Path,
-                        help="Output prefix (default: same as nodes)")
+    parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
+    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
+                        help="Base data directory")
     parser.add_argument("-l", "--lang", default=None, choices=["de", "en"],
                         help="Language for spaCy model (auto-detected if not specified)")
     parser.add_argument("--min-occurrences", type=int, default=4,
                         help="Minimum occurrences for entity to be included")
     args = parser.parse_args()
 
-    if not args.nodes.exists():
-        print(f"Error: Nodes file not found: {args.nodes}", file=sys.stderr)
+    if not args.input.exists():
+        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    if not args.source.exists():
-        print(f"Error: Source file not found: {args.source}", file=sys.stderr)
+    # ULID extrahieren
+    doc_ulid = extract_ulid_from_md(args.input)
+    if not doc_ulid:
+        print(f"Error: No ULID found in {args.input}", file=sys.stderr)
+        sys.exit(1)
+
+    # Pfade ermitteln
+    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+
+    if not output_paths['nodes'].exists():
+        print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
+        print("Run chunker.py first.", file=sys.stderr)
         sys.exit(1)
 
     # Lade Daten
     print("Loading nodes and source...", file=sys.stderr)
-    nodes = json.loads(args.nodes.read_text(encoding="utf-8"))
-    source_text = args.source.read_text(encoding="utf-8")
+    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+    source_text = args.input.read_text(encoding="utf-8")
 
     # Auto-detect Sprache falls nicht angegeben
     lang = args.lang
@@ -368,23 +372,32 @@ def main():
     print(f"\nCreated {len(entity_nodes)} entity nodes", file=sys.stderr)
     print(f"Created {len(entity_edges)} entity edges", file=sys.stderr)
 
-    # Output
-    output_prefix = args.output_prefix or args.nodes.stem
+    # NER-Verzeichnisse erstellen
+    output_paths['ner_nodes'].parent.mkdir(parents=True, exist_ok=True)
+    output_paths['ner_edges'].parent.mkdir(parents=True, exist_ok=True)
 
-    nodes_out = Path(f"{output_prefix}.entity-nodes.json")
-    edges_out = Path(f"{output_prefix}.entity-edges.json")
-
-    nodes_out.write_text(
+    # NER-Files schreiben
+    output_paths['ner_nodes'].write_text(
         json.dumps(entity_nodes, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
-    edges_out.write_text(
+    output_paths['ner_edges'].write_text(
         json.dumps(entity_edges, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
-    print(f"\nWritten {nodes_out}", file=sys.stderr)
-    print(f"Written {edges_out}", file=sys.stderr)
+    print(f"\nWritten {output_paths['ner_nodes']}", file=sys.stderr)
+    print(f"Written {output_paths['ner_edges']}", file=sys.stderr)
+
+    # Update meta.json
+    update_meta(output_paths['meta'], {
+        "step": "ner_extraction",
+        "entity_count": len(entity_nodes),
+        "edge_count": len(entity_edges),
+        "language": lang,
+        "min_occurrences": args.min_occurrences,
+    })
+    print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 
 if __name__ == "__main__":
