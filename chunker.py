@@ -25,6 +25,13 @@ import pysbd
 import mq as markdown_query
 from langdetect import detect, LangDetectException
 
+from file_utils import (
+    get_or_generate_ulid,
+    get_output_paths,
+    ensure_output_dirs,
+    get_month_folder
+)
+
 # -----------------------------------------------------------------------------
 # Config
 # -----------------------------------------------------------------------------
@@ -695,52 +702,97 @@ def build_graph(
 def main():
     parser = argparse.ArgumentParser(description="Chunk Markdown to graph")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Input Markdown file")
-    parser.add_argument("-o", "--output-dir", type=Path, help="Output directory")
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
+    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
+                        help="Base output directory (default: .brain_graph/data)")
     args = parser.parse_args()
-    
+
     if not args.input.exists():
         print(f"File not found: {args.input}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Config laden
     config = load_config(args.config)
 
     # Markdown parsen
     text = args.input.read_text(encoding="utf-8")
-    blocks = parse_markdown(text)
 
+    # ULID generieren/extrahieren und in MD injizieren
+    doc_ulid = get_or_generate_ulid(args.input, text)
+    print(f"Document ULID: {doc_ulid}", file=sys.stderr)
+
+    # Output-Pfade generieren
+    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+    ensure_output_dirs(output_paths)
+
+    # Blocks parsen
+    blocks = parse_markdown(text)
     print(f"Parsed {len(blocks)} blocks", file=sys.stderr)
 
     # Graph bauen (mit automatischer Spracherkennung pro Block)
     nodes, edges = build_graph(blocks, args.input.name, config)
-    
-    # Output
-    if args.output_dir:
-        args.output_dir.mkdir(parents=True, exist_ok=True)
-        nodes_path = args.output_dir / f"{args.input.name}.nodes.json"
-        edges_path = args.output_dir / f"{args.input.name}.edges.json"
-    else:
-        nodes_path = args.input.with_suffix(args.input.suffix + ".nodes.json")
-        edges_path = args.input.with_suffix(args.input.suffix + ".edges.json")
-    
-    nodes_data = [n.to_dict() for n in nodes]
+
+    # Nodes und Edges mit leeren Feldern für spätere Schritte erweitern
+    nodes_data = []
+    for n in nodes:
+        node_dict = n.to_dict()
+        # Füge leere Felder hinzu, die von späteren Schritten gefüllt werden
+        if n.type == "chunk":
+            node_dict.setdefault("summary", None)
+            node_dict.setdefault("categories", [])
+        nodes_data.append(node_dict)
+
     edges_data = [e.to_dict() for e in edges]
-    
-    nodes_path.write_text(json.dumps(nodes_data, ensure_ascii=False, indent=2))
-    edges_path.write_text(json.dumps(edges_data, ensure_ascii=False, indent=2))
-    
+
+    # JSON schreiben
+    output_paths['nodes'].write_text(
+        json.dumps(nodes_data, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+    output_paths['edges'].write_text(
+        json.dumps(edges_data, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+
+    # meta.json erstellen
+    now = datetime.now(timezone.utc)
+    meta = {
+        "source_file": args.input.name,
+        "ulid": doc_ulid,
+        "created_at": now.isoformat(),
+        "modified_at": now.isoformat(),
+        "uses": 1,
+        "importance": None,  # Wird von Taxonomie vererbt
+        "decay": None,       # Wird von Taxonomie vererbt
+        "categories": [],    # Wird von taxonomy_matcher gefüllt
+        "processing_steps": [
+            {
+                "step": "chunking",
+                "completed": True,
+                "timestamp": now.isoformat(),
+                "node_count": len(nodes),
+                "edge_count": len(edges)
+            }
+        ]
+    }
+
+    output_paths['meta'].write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+
     # Stats
     node_types = {}
     for n in nodes:
         node_types[n.type] = node_types.get(n.type, 0) + 1
-    
+
     edge_types = {}
     for e in edges:
         edge_types[e.type] = edge_types.get(e.type, 0) + 1
-    
-    print(f"Written {nodes_path} ({len(nodes)} nodes: {node_types})", file=sys.stderr)
-    print(f"Written {edges_path} ({len(edges)} edges: {edge_types})", file=sys.stderr)
+
+    print(f"Written {output_paths['nodes']} ({len(nodes)} nodes: {node_types})", file=sys.stderr)
+    print(f"Written {output_paths['edges']} ({len(edges)} edges: {edge_types})", file=sys.stderr)
+    print(f"Written {output_paths['meta']}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

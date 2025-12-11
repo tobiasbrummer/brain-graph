@@ -32,6 +32,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from openai import OpenAI
 
+from file_utils import (
+    extract_ulid_from_md,
+    get_output_paths,
+    ensure_output_dirs
+)
+
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
     """Lädt Config aus config.json, mit Defaults."""
@@ -229,71 +235,57 @@ def save_parquet(
 
 def main():
     parser = argparse.ArgumentParser(description="Embed texts to Parquet")
-    parser.add_argument("-i", "--input", type=Path, help="JSON file with text array or nodes.json")
-    parser.add_argument("-o", "--output", type=Path, help="Output Parquet file")
+    parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
-    parser.add_argument("-s", "--source", type=Path, help="Source markdown file (auto-derived from input if not specified)")
-    parser.add_argument("--source-id", type=str, help="Source identifier for metadata")
+    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
+                        help="Base data directory (default: .brain_graph/data)")
     args = parser.parse_args()
+
+    if not args.input.exists():
+        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
+        sys.exit(1)
 
     # Config laden
     config = load_config(args.config)
 
-    # Daten laden
-    if args.input:
-        data = json.loads(args.input.read_text())
-    else:
-        data = json.load(sys.stdin)
-
-    if not data:
-        print("No data provided", file=sys.stderr)
+    # ULID aus Markdown extrahieren
+    doc_ulid = extract_ulid_from_md(args.input)
+    if not doc_ulid:
+        print(f"Error: No ULID found in {args.input}. Run chunker.py first.", file=sys.stderr)
         sys.exit(1)
 
-    # Prüfen ob es Ranges (Objekte mit type/char_start/char_end) oder direkte Texte sind
-    if data and isinstance(data[0], dict) and "type" in data[0]:
-        # Es sind Nodes - Source-File benötigt oder ableiten
-        source_path = args.source
+    print(f"Document ULID: {doc_ulid}", file=sys.stderr)
 
-        # Auto-derive source from input filename
-        if not source_path and args.input:
-            # Jazz.md.nodes.json -> Jazz.md
-            input_str = str(args.input)
-            if input_str.endswith(".nodes.json"):
-                derived = input_str[:-len(".nodes.json")]
-                source_path = Path(derived)
-                print(f"Auto-derived source: {source_path}", file=sys.stderr)
+    # Output-Pfade finden
+    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-        if not source_path:
-            print("Error: --source required when input contains nodes (could not auto-derive)", file=sys.stderr)
-            sys.exit(1)
-        if not source_path.exists():
-            print(f"Error: Source file not found: {source_path}", file=sys.stderr)
-            sys.exit(1)
+    # Nodes und Edges laden
+    if not output_paths['nodes'].exists():
+        print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
+        print("Run chunker.py first.", file=sys.stderr)
+        sys.exit(1)
 
-        # Lade edges für Section-Kontext
-        edges = None
-        edges_path = args.input.parent / args.input.name.replace(".nodes.json", ".edges.json")
-        if edges_path.exists():
-            print(f"Loading edges from {edges_path}", file=sys.stderr)
-            edges = json.loads(edges_path.read_text(encoding="utf-8"))
+    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
 
-        print(f"Extracting text ranges from {source_path}", file=sys.stderr)
-        texts = extract_text_ranges(source_path, data, edges)
-        print(f"Extracted {len(texts)} texts", file=sys.stderr)
+    edges = None
+    if output_paths['edges'].exists():
+        edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
+        print(f"Loaded {len(edges)} edges", file=sys.stderr)
 
-        # Debug: Zeige Text-Größen
-        if texts:
-            sizes = [len(t) for t in texts]
-            print(f"Text sizes: min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)//len(sizes)}", file=sys.stderr)
-    else:
-        # Direkte Texte
-        texts = data
+    # Texte extrahieren
+    print(f"Extracting text ranges from {args.input}", file=sys.stderr)
+    texts = extract_text_ranges(args.input, nodes, edges)
+    print(f"Extracted {len(texts)} texts", file=sys.stderr)
 
     if not texts:
         print("No texts extracted", file=sys.stderr)
         sys.exit(1)
 
-    # Filter zu große Texte aus
+    # Debug: Text-Größen
+    sizes = [len(t) for t in texts]
+    print(f"Text sizes: min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)//len(sizes)}", file=sys.stderr)
+
+    # Filter zu große Texte
     texts, skipped_indices = filter_oversized_texts(texts)
     if skipped_indices:
         print(f"Skipped {len(skipped_indices)} oversized texts", file=sys.stderr)
@@ -304,20 +296,49 @@ def main():
 
     # Embeddings erzeugen
     embeddings = embed_texts(texts, config)
-    
+
     # Dimension validieren
     actual_dim = len(embeddings[0])
     if actual_dim != config["embedding_dim"]:
-        print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}", 
+        print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}",
               file=sys.stderr)
-    
-    # Speichern
-    if args.output:
-        save_parquet(embeddings, args.output, config, args.source_id)
-        print(f"Written {args.output} ({len(embeddings)} embeddings)", file=sys.stderr)
+
+    # Parquet schreiben
+    save_parquet(embeddings, output_paths['embeddings'], config, args.input.name)
+    print(f"Written {output_paths['embeddings']} ({len(embeddings)} embeddings)", file=sys.stderr)
+
+    # meta.json updaten
+    if output_paths['meta'].exists():
+        meta = json.loads(output_paths['meta'].read_text(encoding="utf-8"))
     else:
-        # Stdout: JSON mit Embeddings (für Pipes)
-        json.dump(embeddings, sys.stdout)
+        meta = {
+            "source_file": args.input.name,
+            "ulid": doc_ulid,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "uses": 1,
+            "importance": None,
+            "decay": None,
+            "categories": [],
+            "processing_steps": []
+        }
+
+    # Update meta
+    now = datetime.now(timezone.utc)
+    meta["modified_at"] = now.isoformat()
+    meta["processing_steps"].append({
+        "step": "embedding",
+        "completed": True,
+        "timestamp": now.isoformat(),
+        "embedding_count": len(embeddings),
+        "model": config["embedding_model"],
+        "dim": actual_dim
+    })
+
+    output_paths['meta'].write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+        encoding='utf-8'
+    )
+    print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 
 if __name__ == "__main__":
