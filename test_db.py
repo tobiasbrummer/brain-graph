@@ -97,7 +97,7 @@ def test_semantic_search(con: duckdb.DuckDBPyConnection):
 
     print(f"Found {len(results)} results")
     for i, (chunk_id, text, sim) in enumerate(results, 1):
-        text_preview = text[:100] + "..." if len(text) > 100 else text
+        text_preview = text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
         print(f"\n{i}. {chunk_id} (sim: {sim:.3f})")
         print(f"   {text_preview}")
 
@@ -132,7 +132,7 @@ def test_fulltext_search(con: duckdb.DuckDBPyConnection):
 
     print(f"Found {len(results)} results")
     for i, (node_id, text, score) in enumerate(results, 1):
-        text_preview = text[:100] + "..." if len(text) > 100 else text
+        text_preview = text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
         print(f"\n{i}. {node_id} (score: {score:.3f})")
         print(f"   {text_preview}")
 
@@ -141,16 +141,54 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
     """Test property graph queries."""
     print("\n=== Testing Property Graph Queries (DuckPGQ) ===\n")
 
-    # Find a section node
-    result = con.execute("SELECT id FROM nodes WHERE type = 'section' LIMIT 1").fetchone()
-    if not result:
-        print("No sections found, skipping graph test")
+    # Prefer a "section" node that actually has outgoing edges; otherwise fall back to any edge source
+    result = con.execute("""
+        SELECT n.id
+        FROM nodes n
+        JOIN edges e ON e.from_id = n.id
+        WHERE n.type = 'section'
+        LIMIT 1
+    """).fetchone()
+    source_id = None
+    if result:
+        source_id = result[0]
+        print(f"Testing with section: {source_id}")
+    else:
+        result = con.execute("SELECT from_id FROM edges LIMIT 1").fetchone()
+        if not result:
+            print("No edges found, skipping graph test")
+            return
+        source_id = result[0]
+        print(f"Testing with node: {source_id}")
+
+    # DuckPGQ GRAPH_TABLE smoke test (falls back to plain SQL on failure)
+    try:
+        # DuckPGQ doesn't reliably support parameter placeholders inside GRAPH_TABLE,
+        # so we inline the ID (it's sourced from the DB itself).
+        source_id_sql = str(source_id).replace("'", "''")
+        results = con.execute(f"""
+            SELECT *
+            FROM GRAPH_TABLE (brain_graph
+                MATCH (a:nodes)-[e:edges]->(b:nodes)
+                WHERE a.id = '{source_id_sql}'
+                COLUMNS (
+                    a.id as from_id,
+                    e.type as relationship,
+                    b.id as target_id,
+                    b.type as target_type
+                )
+            ) gt
+            LIMIT 10
+        """).fetchall()
+
+        print(f"GRAPH_TABLE returned {len(results)} rows")
+        for i, (from_id, rel, tid, ttype) in enumerate(results, 1):
+            print(f"  {i}. {from_id} --[{rel}]--> {tid} ({ttype})")
         return
+    except duckdb.Error as e:
+        print(f"GRAPH_TABLE failed, falling back to SQL ({e})")
 
-    section_id = result[0]
-    print(f"Testing with section: {section_id}")
-
-    # Find all nodes connected to this section
+    # Plain SQL fallback
     results = con.execute("""
         SELECT
             n.id,
@@ -158,13 +196,12 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
             e.type as relationship,
             target.id as target_id,
             target.type as target_type
-        FROM graph_table (brain_graph
-            MATCH (n:Node)-[e:Relationship]->(target:Node)
-            WHERE n.id = ?
-            COLUMNS (n.id, n.type, e.type, target.id, target.type)
-        )
+        FROM nodes n
+        JOIN edges e ON n.id = e.from_id
+        JOIN nodes target ON e.to_id = target.id
+        WHERE n.id = ?
         LIMIT 10
-    """, [section_id]).fetchall()
+    """, [source_id]).fetchall()
 
     print(f"Found {len(results)} connections")
     for i, (nid, ntype, rel, tid, ttype) in enumerate(results, 1):

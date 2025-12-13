@@ -22,3 +22,9 @@ Configuration for embedding, chunking, and summarization.
 +base_url:<http://localhost:8100/v1>
 +model:Qwen3-VL-4B-Thinking-Q4_K_M
 +api_key:unused
+
+## Reranker
+
++base_url:<http://localhost:8300/v1>
++model:jina-reranker-v3-Q4_K_M
++api_key:unused

@@ -50,3 +50,28 @@ services:
       -ub 8192
       --pooling mean       
       --timeout 30
+
+
+  # ---------------------------------------------------------
+  # Service 3: Jina Reranker v3
+  # ---------------------------------------------------------
+  rerank-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama-cpp-rerank
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /var/home/t0bybr/huggingface/models:/models:z    # Hier liegen deine .gguf Dateien
+    environment:
+      - GGML_VULKAN_DEVICE=0
+    ports:
+      - 8300:8080
+    command: >
+      -m /models/jina-reranker-v3-Q4_K_M.gguf
+      --reranking          
+      -c 8192
+      -np 8
+      -ngl 99
+      -ub 8192
+      --timeout 30

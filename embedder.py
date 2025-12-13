@@ -36,33 +36,9 @@ from file_utils import (
     extract_ulid_from_md,
     get_output_paths,
     ensure_output_dirs,
+    load_config,
     update_meta
 )
-
-
-def load_config(config_path: Path | None = None) -> dict[str, Any]:
-    """Lädt Config aus config.json, mit Defaults."""
-    defaults = {
-        "embedding_base_url": "http://localhost:8200/v1",
-        "embedding_model": "jina-embeddings-v2-base-de",
-        "embedding_dim": 768,
-        "embedding_api_key": "unused",
-        "embedding_batch_size": 1,
-    }
-
-    # Suche config.json
-    if config_path is None:
-        for parent in [Path.cwd(), *Path.cwd().parents]:
-            candidate = parent / "config.json"
-            if candidate.exists():
-                config_path = candidate
-                break
-
-    if config_path and config_path.exists():
-        user_config = json.loads(config_path.read_text(encoding="utf-8"))
-        defaults.update(user_config)
-
-    return defaults
 
 
 def normalize_markdown(text: str) -> str:
@@ -96,16 +72,20 @@ def normalize_markdown(text: str) -> str:
     return text.strip()
 
 
-def extract_text_ranges(source_path: Path, nodes: list[dict[str, Any]], edges: list[dict[str, Any]] | None = None) -> list[str]:
+def extract_text_ranges(source_path: Path, nodes: list[dict[str, Any]], edges: list[dict[str, Any]] | None = None) -> tuple[list[str], list[str]]:
     """Extrahiert Texte aus einem Source-File basierend auf char_start/char_end.
 
     Filtert nur Nodes vom Typ 'chunk' (nicht 'code' oder 'section').
     Fügt Section-Titel als Kontext hinzu.
     Normalisiert den Text (entfernt Markdown-Syntax).
     Code braucht einen separaten Embedder.
+
+    Returns:
+        (texts, chunk_ids): Listen von Texten und zugehörigen chunk IDs
     """
     source_text = source_path.read_text(encoding="utf-8")
     texts = []
+    chunk_ids = []
 
     # Erstelle Mapping: node_id -> node für schnellen Zugriff
     node_map = {n["id"]: n for n in nodes if isinstance(n, dict)}
@@ -121,6 +101,7 @@ def extract_text_ranges(source_path: Path, nodes: list[dict[str, Any]], edges: l
         # Nur chunk Nodes embedden - nicht code, nicht sections
         if not isinstance(node, dict):
             texts.append(str(node))
+            chunk_ids.append(f"unknown_{len(chunk_ids)}")
             continue
 
         node_type = node.get("type", "")
@@ -151,35 +132,39 @@ def extract_text_ranges(source_path: Path, nodes: list[dict[str, Any]], edges: l
             # WICHTIG: Präfix für Jina v3 / asymmetrische Suche hinzufügen
             text = f"Passage: {text}"
             texts.append(text)
+            chunk_ids.append(node["id"])
 
-    return texts
+    return texts, chunk_ids
 
 
-def filter_oversized_texts(texts: list[str], max_tokens: int = 7000) -> tuple[list[str], list[int]]:
+def filter_oversized_texts(texts: list[str], chunk_ids: list[str], max_tokens: int = 7000) -> tuple[list[str], list[str], list[int]]:
     """Filtert zu große Texte aus und gibt Indices der gefilterten zurück.
 
     Args:
         texts: Liste von Texten
+        chunk_ids: Liste von chunk IDs (parallel zu texts)
         max_tokens: Maximale Token-Anzahl (grobe Schätzung: chars / 4)
                     Default 7000 tokens für jina-embeddings-v2-base-de (~8k context)
 
     Returns:
-        (gefilterte_texte, indices_der_geskippten)
+        (gefilterte_texte, gefilterte_chunk_ids, indices_der_geskippten)
     """
-    filtered = []
+    filtered_texts = []
+    filtered_ids = []
     skipped = []
 
     max_chars = max_tokens * 4  # Grobe Schätzung: 1 token ≈ 4 chars
 
-    for i, text in enumerate(texts):
+    for i, (text, chunk_id) in enumerate(zip(texts, chunk_ids)):
         if len(text) > max_chars:
-            print(f"Warning: Skipping text {i} (too large: {len(text)} chars, ~{len(text)//4} tokens)",
+            print(f"Warning: Skipping text {i} ({chunk_id}) (too large: {len(text)} chars, ~{len(text)//4} tokens)",
                   file=sys.stderr)
             skipped.append(i)
         else:
-            filtered.append(text)
+            filtered_texts.append(text)
+            filtered_ids.append(chunk_id)
 
-    return filtered, skipped
+    return filtered_texts, filtered_ids, skipped
 
 
 def embed_texts(texts: list[str], config: dict[str, Any]) -> list[list[float]]:
@@ -208,13 +193,14 @@ def embed_texts(texts: list[str], config: dict[str, Any]) -> list[list[float]]:
 
 def save_parquet(
     embeddings: list[list[float]],
+    chunk_ids: list[str],
     output_path: Path,
     config: dict[str, Any],
     source: str | None = None,
 ) -> None:
     """Speichert Embeddings als Parquet mit Metadata."""
     table = pa.table({
-        "chunk_idx": list(range(len(embeddings))),
+        "chunk_idx": chunk_ids,
         "embedding": embeddings,
     })
     
@@ -275,7 +261,7 @@ def main():
 
     # Texte extrahieren
     print(f"Extracting text ranges from {args.input}", file=sys.stderr)
-    texts = extract_text_ranges(args.input, nodes, edges)
+    texts, chunk_ids = extract_text_ranges(args.input, nodes, edges)
     print(f"Extracted {len(texts)} texts", file=sys.stderr)
 
     if not texts:
@@ -287,7 +273,7 @@ def main():
     print(f"Text sizes: min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)//len(sizes)}", file=sys.stderr)
 
     # Filter zu große Texte
-    texts, skipped_indices = filter_oversized_texts(texts)
+    texts, chunk_ids, skipped_indices = filter_oversized_texts(texts, chunk_ids)
     if skipped_indices:
         print(f"Skipped {len(skipped_indices)} oversized texts", file=sys.stderr)
 
@@ -305,7 +291,7 @@ def main():
               file=sys.stderr)
 
     # Parquet schreiben
-    save_parquet(embeddings, output_paths['embeddings'], config, args.input.name)
+    save_parquet(embeddings, chunk_ids, output_paths['embeddings'], config, args.input.name)
     print(f"Written {output_paths['embeddings']} ({len(embeddings)} embeddings)", file=sys.stderr)
 
     # meta.json updaten

@@ -17,11 +17,12 @@ from typing import Any
 
 from openai import OpenAI
 
-from file_utils import (
+from file_utils import (, load_config
     extract_ulid_from_md,
     get_output_paths,
     update_meta
-)
+,
+    load_config)
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:

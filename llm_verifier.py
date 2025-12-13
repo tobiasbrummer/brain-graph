@@ -246,6 +246,9 @@ def main():
     nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
     categories = json.loads(args.taxonomy.read_text(encoding="utf-8"))
 
+    print(nodes)
+    print(categories)
+
     # Lade Edges
     edges = []
     if output_paths['edges'].exists():

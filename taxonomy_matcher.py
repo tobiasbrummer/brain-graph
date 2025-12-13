@@ -141,7 +141,7 @@ def match_categories(
             prev_sim = sim
 
         if chunk_matches:
-            matches[chunk_idx] = chunk_matches
+            matches[i] = chunk_matches  # Use integer index, not chunk_idx string
 
     if verbose:
         print(f"\nFiltering stats:", file=sys.stderr)
@@ -208,7 +208,7 @@ def main():
                         help="Base data directory")
     parser.add_argument("--top-n", type=int, default=3,
                         help="Max categories per chunk")
-    parser.add_argument("--min-similarity", type=float, default=0.499,
+    parser.add_argument("--min-similarity", type=float, default=0.399,
                         help="Minimum similarity threshold")
     parser.add_argument("--max-gap", type=float, default=0.1,
                         help="Maximum gap between top category and next category")

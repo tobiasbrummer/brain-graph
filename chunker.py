@@ -731,8 +731,17 @@ def main():
 
     # Vault-Pfad generieren und Datei kopieren
     from file_utils import get_month_folder, slugify
-    month = get_month_folder()
-    slug = slugify(args.input.stem)
+
+    # Monat aus Input-Pfad nutzen (falls vault/YYYY-MM/) oder aktuellen Monat
+    parent_name = args.input.parent.name
+    if re.match(r'^\d{4}-\d{2}$', parent_name):
+        month = parent_name
+    else:
+        month = get_month_folder()
+
+    # ULID-Suffix aus stem entfernen (falls Reprocessing von vault-Datei)
+    stem = re.sub(r'-[A-Z0-9]{6}$', '', args.input.stem, flags=re.IGNORECASE)
+    slug = slugify(stem)
     ulid_suffix = doc_ulid[-6:]
     vault_filename = f"{slug}-{ulid_suffix}.md"
     vault_path = args.vault_dir / month / vault_filename
@@ -742,26 +751,42 @@ def main():
 
     # Skip-Logik: Wenn vault existiert und hash gleich
     vault_unchanged = False
-    if vault_path.exists() and not args.force:
+    input_is_vault_target = False
+    try:
+        input_is_vault_target = args.input.resolve() == vault_path.resolve()
+    except OSError:
+        # Fallback for non-resolvable paths (should be rare since input exists)
+        input_is_vault_target = args.input.absolute() == vault_path.absolute()
+
+    if input_is_vault_target:
+        print("✓ Input already at vault path, skipping copy", file=sys.stderr)
+        vault_unchanged = True
+    elif vault_path.exists() and not args.force:
         vault_hash = get_source_hash(vault_path)
         input_hash = get_source_hash(args.input)
 
         if vault_hash == input_hash:
-            print(f"✓ Vault file unchanged, skipping copy", file=sys.stderr)
+            print("✓ Vault file unchanged, skipping copy", file=sys.stderr)
             vault_unchanged = True
         else:
-            print(f"✎ Vault file changed, updating...", file=sys.stderr)
+            print("✎ Vault file changed, updating...", file=sys.stderr)
 
     # Datei nach vault kopieren (mit aktualisierter ULID)
     if not vault_unchanged:
         import shutil
-        shutil.copy2(args.input, vault_path)
-        print(f"Copied to vault: {vault_path}", file=sys.stderr)
+        try:
+            shutil.copy2(args.input, vault_path)
+            print(f"Copied to vault: {vault_path}", file=sys.stderr)
+        except shutil.SameFileError:
+            print("✓ Input already at vault path, skipping copy", file=sys.stderr)
 
     # Optional: Originaldatei löschen
     if args.delete_source:
-        args.input.unlink()
-        print(f"Deleted source: {args.input}", file=sys.stderr)
+        if input_is_vault_target:
+            print("Warning: --delete-source ignored (input is already in vault)", file=sys.stderr)
+        else:
+            args.input.unlink()
+            print(f"Deleted source: {args.input}", file=sys.stderr)
 
     # Ab jetzt mit vault-Datei arbeiten
     working_file = vault_path

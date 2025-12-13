@@ -10,5 +10,8 @@
   "chunking_language": "de",
   "summary_base_url": "http://localhost:8100/v1",
   "summary_model": "Qwen3-VL-4B-Thinking-Q4_K_M",
-  "summary_api_key": "unused"
+  "summary_api_key": "unused",
+  "reranker_base_url": "http://localhost:8300/v1",
+  "reranker_model": "jina-reranker-v3-Q4_K_M",
+  "reranker_api_key": "unused"
 }

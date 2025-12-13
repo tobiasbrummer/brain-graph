@@ -11,10 +11,51 @@ Handles:
 import hashlib
 import json
 import re
+import subprocess
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+
+
+def load_config(config_path: Path | None = None) -> dict[str, Any]:
+    """
+    Load configuration from config.json.
+
+    Searches for config.json in:
+    1. .brain_graph/config/config.json (new structure)
+    2. config.json (old structure, fallback)
+
+    Args:
+        config_path: Optional explicit path to config file
+
+    Returns:
+        Configuration dictionary
+    """
+    if config_path is None:
+        # Search in current directory and parents
+        for parent in [Path.cwd(), *Path.cwd().parents]:
+            # Try new structure first
+            candidate = parent / ".brain_graph" / "config" / "config.json"
+            if candidate.exists():
+                config_path = candidate
+                break
+
+            # Try old structure as fallback
+            candidate = parent / "config.json"
+            if candidate.exists():
+                config_path = candidate
+                break
+
+    if config_path is None or not config_path.exists():
+        raise FileNotFoundError(
+            "config.json not found. Searched for:\n"
+            "  - .brain_graph/config/config.json\n"
+            "  - config.json\n"
+            "Please create a config file or use --config to specify the path."
+        )
+
+    return json.loads(config_path.read_text(encoding="utf-8"))
 
 
 def slugify(text: str) -> str:

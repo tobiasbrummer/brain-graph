@@ -39,7 +39,10 @@ class BrainGraphDB:
 
     def __init__(self, db_path: str = ":memory:"):
         """Initialize database connection."""
-        self.con = duckdb.connect(db_path)
+        self.con = duckdb.connect(db_path, config={
+            "allow_unsigned_extensions": "true",
+            "hnsw_enable_experimental_persistence": "true"
+        })
         self._setup_extensions()
         self._create_schema()
 
@@ -50,6 +53,11 @@ class BrainGraphDB:
         self.con.execute("LOAD vss;")
         self.con.execute("INSTALL fts;")
         self.con.execute("LOAD fts;")
+        try:
+            self.con.execute("FORCE INSTALL 'lib/duckpgq/duckpgq.duckdb_extension';")
+            self.con.execute("LOAD duckpgq;")
+        except duckdb.Error as e:
+            print(f"Warning: DuckPGQ extension not available ({e})", file=sys.stderr)
 
     def _create_schema(self):
         """Create all tables and indexes."""
@@ -98,7 +106,7 @@ class BrainGraphDB:
         self.con.execute("""
             CREATE TABLE IF NOT EXISTS chunk_embeddings_256d (
                 chunk_id VARCHAR PRIMARY KEY,
-                embedding DOUBLE[256],
+                embedding FLOAT[256],
                 source_file VARCHAR
             );
         """)
@@ -107,7 +115,7 @@ class BrainGraphDB:
         self.con.execute("""
             CREATE TABLE IF NOT EXISTS taxonomy_embeddings_256d (
                 category_id VARCHAR PRIMARY KEY,
-                embedding DOUBLE[256]
+                embedding FLOAT[256]
             );
         """)
 
@@ -144,7 +152,28 @@ class BrainGraphDB:
         with open(nodes_path, encoding="utf-8") as f:
             nodes = json.load(f)
 
+        # Load source text for extracting chunk text
+        source_text = None
+        source_path = Path(source_file)
+        if source_path.exists():
+            try:
+                source_text = source_path.read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"Warning: Could not read source file {source_file}: {e}", file=sys.stderr)
+
         for node in nodes:
+            # Extract text for chunks if source is available
+            text = node.get('text')
+            if (not text and source_text and
+                node.get('type') == 'chunk' and
+                'char_start' in node and 'char_end' in node):
+                try:
+                    start = node['char_start']
+                    end = node['char_end']
+                    text = source_text[start:end].strip()
+                except Exception as e:
+                    print(f"Warning: Could not extract text for chunk {node.get('id')}: {e}", file=sys.stderr)
+
             self.con.execute("""
                 INSERT OR REPLACE INTO nodes (
                     id, ulid, type, source_file,
@@ -159,7 +188,7 @@ class BrainGraphDB:
                 node.get('type'),
                 source_file,
                 node.get('title'),
-                node.get('text'),
+                text,
                 node.get('description'),
                 node.get('keywords', []),
                 node.get('language'),
@@ -222,7 +251,7 @@ class BrainGraphDB:
 
             self.con.execute("""
                 INSERT OR REPLACE INTO chunk_embeddings_256d (chunk_id, embedding, source_file)
-                VALUES (?, ?, ?)
+                VALUES (?, CAST(? AS FLOAT[256]), ?)
             """, [chunk_id, embedding_truncated, source_file])
 
     def import_meta(self, meta: dict):
@@ -232,7 +261,7 @@ class BrainGraphDB:
                 ulid, source_file, source_hash,
                 source_commit, source_commit_date, source_dirty,
                 created_at, modified_at, uses, importance, decay
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, COALESCE(?, ''), ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
             meta.get('ulid'),
             meta.get('source_file'),
@@ -249,8 +278,8 @@ class BrainGraphDB:
 
     def import_taxonomy(
         self,
-        nodes_path: Path = Path("data/taxonomy.nodes.json"),
-        parquet_path: Path = Path("data/taxonomy.parquet"),
+        nodes_path: Path = Path(".brain_graph/config/taxonomy.md.nodes.json"),
+        parquet_path: Path = Path(".brain_graph/config/taxonomy.md.parquet"),
         target_dim: int = 256
     ):
         """Import taxonomy nodes and embeddings."""
@@ -283,7 +312,7 @@ class BrainGraphDB:
 
             self.con.execute("""
                 INSERT OR REPLACE INTO taxonomy_embeddings_256d (category_id, embedding)
-                VALUES (?, ?)
+                VALUES (?, CAST(? AS FLOAT[256]))
             """, [row['category_id'], embedding_truncated])
 
     def import_directory(self, data_dir: Path):
@@ -388,30 +417,58 @@ class BrainGraphDB:
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_id)")
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_meta_hash ON meta(source_hash)")
 
+        # Load German stopwords
+        print("  German stopwords...", file=sys.stderr)
+        stopwords_path = Path(".brain_graph/config/stopwords_de.md")
+        if stopwords_path.exists():
+            # Create stopwords table
+            self.con.execute("DROP TABLE IF EXISTS german_stopwords")
+            self.con.execute("CREATE TABLE german_stopwords (word VARCHAR)")
+
+            # Load stopwords from file
+            stopwords = stopwords_path.read_text(encoding='utf-8').strip().split('\n')
+            stopwords = [w.strip() for w in stopwords if w.strip()]
+
+            # Insert in batches for efficiency
+            self.con.executemany(
+                "INSERT INTO german_stopwords VALUES (?)",
+                [(w,) for w in stopwords]
+            )
+            print(f"    Loaded {len(stopwords)} German stopwords", file=sys.stderr)
+            stopwords_table = 'german_stopwords'
+        else:
+            print(f"    Warning: {stopwords_path} not found, using no stopwords", file=sys.stderr)
+            stopwords_table = 'none'
+
         print("  FTS index (BM25)...", file=sys.stderr)
-        self.con.execute("""
+        # Create FTS index with German stemmer and stopwords
+        self.con.execute(f"""
             PRAGMA create_fts_index(
-                'nodes',
-                'id',
-                'text', 'summary', 'title', 'description',
+                'nodes', 'id', 'text', 'summary', 'title', 'description',
+                stemmer='german',
+                stopwords='{stopwords_table}',
+                ignore='(\\.|[^a-zäöüß])+',
+                strip_accents=1,
+                lower=1,
                 overwrite=1
             )
         """)
 
         print("  Property graph...", file=sys.stderr)
-        self.con.execute("""
-            CREATE PROPERTY GRAPH brain_graph
-            VERTEX TABLES (
-                nodes LABEL Node PROPERTIES (id, type, title, text, language, summary)
-            )
-            EDGE TABLES (
-                edges
-                    SOURCE KEY (from_id) REFERENCES nodes (id)
-                    DESTINATION KEY (to_id) REFERENCES nodes (id)
-                    LABEL Relationship
-                    PROPERTIES (type, weight, similarity)
-            )
-        """)
+        try:
+            # This DuckPGQ build supports a reduced CREATE PROPERTY GRAPH grammar
+            # (no LABEL/PROPERTIES clauses, and requires REFERENCES on keys).
+            self.con.execute("""
+                CREATE PROPERTY GRAPH brain_graph
+                VERTEX TABLES (nodes)
+                EDGE TABLES (
+                    edges
+                        SOURCE KEY (from_id) REFERENCES nodes(id)
+                        DESTINATION KEY (to_id) REFERENCES nodes(id)
+                );
+            """)
+        except duckdb.Error as e:
+            print(f"  Warning: Property graph creation failed, skipping ({e})", file=sys.stderr)
 
     def stats(self):
         """Print database statistics."""
