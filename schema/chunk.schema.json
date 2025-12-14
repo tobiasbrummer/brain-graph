@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/chunk.schema.json",
+  "title": "Chunk",
+  "description": "Text chunk with content-addressable ID",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^chunk_[a-f0-9]{8,12}$",
+      "description": "Short chunk ID (chunk_<hash>)"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID for this chunk node"
+    },
+    "doc_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID of parent document"
+    },
+    "chunk_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}:[a-f0-9]{12}$",
+      "description": "Composite ID: doc_id:chunk_hash"
+    },
+    "chunk_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{12}$",
+      "description": "Content-addressable hash (xxhash64 first 12 hex chars)"
+    },
+    "chunk_index": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sequential index within document (for ordering)"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Chunk text content"
+    },
+    "tokens": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Token count (for context window management)"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "ISO 639-1 language code",
+      "examples": ["de", "en", "fr"]
+    },
+    "char_start": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Character offset where chunk starts in full_text"
+    },
+    "char_end": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Character offset where chunk ends in full_text"
+    },
+    "summary": {
+      "type": ["string", "null"],
+      "description": "LLM-generated summary of chunk"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Taxonomy categories assigned to this chunk"
+    }
+  },
+  "required": ["id", "ulid", "doc_id", "chunk_id", "chunk_hash", "chunk_index", "text", "tokens", "language", "char_start", "char_end"],
+  "additionalProperties": false
+}

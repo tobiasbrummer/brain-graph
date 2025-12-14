@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/section.schema.json",
+  "title": "Section",
+  "description": "Document structure section (heading hierarchy)",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^sec_[a-f0-9]{8,12}$",
+      "description": "Short section ID (sec_<hash>)"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID for this section node"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Section heading text"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "Heading level (1-6, corresponding to h1-h6)"
+    }
+  },
+  "required": ["id", "ulid", "title", "level"],
+  "additionalProperties": false
+}

@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/document.schema.json",
+  "title": "Document",
+  "description": "Complete document with metadata, graph structure, links, and processing info",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID of document"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{1,60}$",
+      "description": "URL-safe slug derived from title"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative path to file in vault"
+    },
+    "original_source": {
+      "type": ["string", "null"],
+      "description": "Original source path if file was moved from inbox"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Document title"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "ISO 639-1 language code (auto-detected)",
+      "examples": ["de", "en", "fr"]
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": ["note", "pdf", "invoice", "email", "image", "webpage"],
+      "description": "Document type"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{8,64}$",
+      "description": "SHA256 hash of content (short or full)"
+    },
+    "file_hash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{8,64}$",
+      "description": "SHA256 hash of entire file (if different from content)"
+    },
+    "source_commit": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{7,40}$",
+      "description": "Git commit hash when document was processed"
+    },
+    "source_commit_date": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Git commit timestamp"
+    },
+    "source_dirty": {
+      "type": "boolean",
+      "description": "Whether working directory had uncommitted changes"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 creation timestamp"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 last modified timestamp"
+    },
+    "uses": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Access count for information decay"
+    },
+    "importance": {
+      "type": ["number", "null"],
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Importance score (0.0-1.0)"
+    },
+    "decay": {
+      "type": ["number", "null"],
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Decay factor based on time and usage"
+    },
+    "full_text": {
+      "type": "string",
+      "description": "Full markdown content (without frontmatter if applicable)"
+    },
+    "facets": {
+      "type": "object",
+      "description": "Type-specific metadata (flexible JSON, schema defined per doc_type)",
+      "additionalProperties": true
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Graph nodes grouped by type",
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "section.schema.json"
+          },
+          "description": "Document structure sections"
+        },
+        "chunks": {
+          "type": "array",
+          "items": {
+            "$ref": "chunk.schema.json"
+          },
+          "description": "Text chunks for retrieval"
+        },
+        "entities": {
+          "type": "array",
+          "items": {
+            "$ref": "entity.schema.json"
+          },
+          "description": "Named entities extracted from text"
+        }
+      },
+      "required": ["sections", "chunks", "entities"],
+      "additionalProperties": false
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "edge.schema.json"
+      },
+      "description": "Graph edges connecting nodes"
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "link.schema.json"
+      },
+      "description": "Outgoing links (+link:, +image:, etc. from SYNTAX.md)"
+    },
+    "backlinks": {
+      "type": "array",
+      "items": {
+        "$ref": "link.schema.json"
+      },
+      "description": "Incoming links from other documents (computed during build)"
+    },
+    "processing": {
+      "type": "object",
+      "description": "Pipeline processing metadata",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "type": "string",
+                "enum": [
+                  "chunking",
+                  "embedding",
+                  "summarization",
+                  "taxonomy_matching",
+                  "llm_verification",
+                  "ner_extraction"
+                ]
+              },
+              "completed": {
+                "type": "boolean"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": ["step", "completed", "timestamp"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["steps"]
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "path",
+    "title",
+    "language",
+    "doc_type",
+    "content_hash",
+    "source_dirty",
+    "created",
+    "updated",
+    "uses",
+    "full_text",
+    "nodes",
+    "edges",
+    "links",
+    "backlinks",
+    "processing"
+  ],
+  "additionalProperties": false
+}

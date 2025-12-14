@@ -147,20 +147,38 @@ class BrainGraphDB:
             );
         """)
 
-    def import_nodes(self, nodes_path: Path, source_file: str):
-        """Import nodes from JSON."""
+    def import_nodes(self, nodes_path: Path, source_file: str, source_text_cache: dict = None):
+        """Import nodes from JSON with batch insert."""
+        import time
+
+        # JSON loading
+        json_start = time.time()
         with open(nodes_path, encoding="utf-8") as f:
             nodes = json.load(f)
+        json_time = time.time() - json_start
 
-        # Load source text for extracting chunk text
+        # Source file loading
+        source_start = time.time()
         source_text = None
         source_path = Path(source_file)
-        if source_path.exists():
-            try:
-                source_text = source_path.read_text(encoding="utf-8")
-            except Exception as e:
-                print(f"Warning: Could not read source file {source_file}: {e}", file=sys.stderr)
 
+        if source_path.exists():
+            # Check cache first
+            if source_text_cache is not None and source_file in source_text_cache:
+                source_text = source_text_cache[source_file]
+            else:
+                try:
+                    source_text = source_path.read_text(encoding="utf-8")
+                    # Cache for reuse
+                    if source_text_cache is not None:
+                        source_text_cache[source_file] = source_text
+                except Exception as e:
+                    print(f"Warning: Could not read source file {source_file}: {e}", file=sys.stderr)
+        source_time = time.time() - source_start
+
+        # Prepare batch data
+        prep_start = time.time()
+        batch_data = []
         for node in nodes:
             # Extract text for chunks if source is available
             text = node.get('text')
@@ -174,15 +192,7 @@ class BrainGraphDB:
                 except Exception as e:
                     print(f"Warning: Could not extract text for chunk {node.get('id')}: {e}", file=sys.stderr)
 
-            self.con.execute("""
-                INSERT OR REPLACE INTO nodes (
-                    id, ulid, type, source_file,
-                    title, text, description, keywords,
-                    language, char_start, char_end, summary,
-                    entity_type, occurrences, mentioned_in,
-                    level, code_language
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, [
+            batch_data.append([
                 node.get('id'),
                 node.get('ulid'),
                 node.get('type'),
@@ -201,19 +211,42 @@ class BrainGraphDB:
                 node.get('level'),
                 node.get('code_language', node.get('language') if node.get('type') == 'code' else None)
             ])
+        prep_time = time.time() - prep_start
+
+        # Batch insert (skip if no data)
+        # Use transaction for much faster inserts
+        insert_start = time.time()
+        if batch_data:
+            self.con.execute("BEGIN TRANSACTION")
+            try:
+                self.con.executemany("""
+                    INSERT OR IGNORE INTO nodes (
+                        id, ulid, type, source_file,
+                        title, text, description, keywords,
+                        language, char_start, char_end, summary,
+                        entity_type, occurrences, mentioned_in,
+                        level, code_language
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, batch_data)
+                self.con.execute("COMMIT")
+            except:
+                self.con.execute("ROLLBACK")
+                raise
+        insert_time = time.time() - insert_start
+
+        total_time = json_time + source_time + prep_time + insert_time
+        if total_time > 0.5:  # Only print if slow
+            import sys
+            print(f"    [Nodes: JSON={json_time:.2f}s, Source={source_time:.2f}s, Prep={prep_time:.2f}s, Insert={insert_time:.2f}s, Total={total_time:.2f}s]", file=sys.stderr)
 
     def import_edges(self, edges_path: Path, source_file: str, edge_id_offset: int = 0):
-        """Import edges from JSON."""
+        """Import edges from JSON with batch insert."""
         with open(edges_path, encoding="utf-8") as f:
             edges = json.load(f)
 
-        for i, edge in enumerate(edges):
-            self.con.execute("""
-                INSERT OR REPLACE INTO edges (
-                    id, from_id, to_id, type,
-                    weight, similarity, overlap_chars, source_file
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, [
+        # Prepare batch data
+        batch_data = [
+            [
                 edge_id_offset + i,
                 edge['from'],
                 edge['to'],
@@ -222,18 +255,38 @@ class BrainGraphDB:
                 edge.get('similarity'),
                 edge.get('overlap_chars'),
                 source_file
-            ])
+            ]
+            for i, edge in enumerate(edges)
+        ]
+
+        # Batch insert (skip if no data)
+        # Use transaction for much faster inserts
+        if batch_data:
+            self.con.execute("BEGIN TRANSACTION")
+            try:
+                self.con.executemany("""
+                    INSERT OR IGNORE INTO edges (
+                        id, from_id, to_id, type,
+                        weight, similarity, overlap_chars, source_file
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, batch_data)
+                self.con.execute("COMMIT")
+            except:
+                self.con.execute("ROLLBACK")
+                raise
 
         return edge_id_offset + len(edges)
 
     def import_embeddings(self, parquet_path: Path, source_file: str, target_dim: int = 256):
         """
         Import embeddings from Parquet, truncating to target dimension.
+        Uses DuckDB's native Parquet reader for maximum speed.
         """
-        table = pq.read_table(parquet_path)
-        df = table.to_pandas()
+        import time
+        start = time.time()
 
-        # Get metadata
+        # Get metadata (still need pyarrow for this)
+        table = pq.read_table(parquet_path)
         metadata = table.schema.metadata or {}
         model = metadata.get(b'model', b'unknown').decode('utf-8')
         dim = int(metadata.get(b'dim', b'1024').decode('utf-8'))
@@ -244,15 +297,35 @@ class BrainGraphDB:
             VALUES (?, ?, ?, ?, ?)
         """, [source_file, str(parquet_path), dim, model, datetime.now(timezone.utc)])
 
-        # Import truncated embeddings
-        for _, row in df.iterrows():
-            chunk_id = row['chunk_idx'] if isinstance(row['chunk_idx'], str) else f"chunk_{row['chunk_idx']:08x}"
-            embedding_truncated = truncate_embedding(row['embedding'], target_dim)
+        # Use PyArrow with batch insert (safer than DuckDB native)
+        # DuckDB's native reader can segfault on some problematic files
+        try:
+            df = table.to_pandas()
+            batch_data = []
+            for _, row in df.iterrows():
+                chunk_id = row['chunk_idx'] if isinstance(row['chunk_idx'], str) else f"chunk_{row['chunk_idx']:08x}"
+                embedding_truncated = truncate_embedding(row['embedding'], target_dim)
+                batch_data.append((chunk_id, embedding_truncated, source_file))
 
-            self.con.execute("""
-                INSERT OR REPLACE INTO chunk_embeddings_256d (chunk_id, embedding, source_file)
-                VALUES (?, CAST(? AS FLOAT[256]), ?)
-            """, [chunk_id, embedding_truncated, source_file])
+            # Use transaction for faster inserts
+            self.con.execute("BEGIN TRANSACTION")
+            try:
+                self.con.executemany("""
+                    INSERT OR IGNORE INTO chunk_embeddings_256d (chunk_id, embedding, source_file)
+                    VALUES (?, CAST(? AS FLOAT[256]), ?)
+                """, batch_data)
+                self.con.execute("COMMIT")
+            except:
+                self.con.execute("ROLLBACK")
+                raise
+
+            count = len(batch_data)
+            elapsed = time.time() - start
+            print(f"    → {count} embeddings in {elapsed:.2f}s", file=sys.stderr)
+
+        except Exception as e:
+            print(f"    Error importing embeddings from {parquet_path}: {e}", file=sys.stderr)
+            raise
 
     def import_meta(self, meta: dict):
         """Import meta data from meta.json."""
@@ -329,6 +402,8 @@ class BrainGraphDB:
             ├── nodes/YYYY-MM/{slug}-{ulid}.ner.nodes.json
             └── edges/YYYY-MM/{slug}-{ulid}.ner.edges.json
         """
+        import time
+
         # Find all nodes files (these are the canonical source)
         nodes_dir = data_dir / "nodes"
         if not nodes_dir.exists():
@@ -341,8 +416,11 @@ class BrainGraphDB:
             return
 
         edge_id_offset = 0
+        source_text_cache = {}  # Cache source files to avoid re-reading
 
         for nodes_file in sorted(nodes_files):
+            file_start = time.time()
+
             # Extract filename base (e.g., "jazz-einfuhrung-a1b2c3")
             filename_base = nodes_file.stem.replace('.nodes', '')
             month_folder = nodes_file.parent.name  # YYYY-MM
@@ -364,19 +442,19 @@ class BrainGraphDB:
                 print(f"  Meta: {meta_file.name}", file=sys.stderr)
                 self.import_meta(meta)
 
-            # Import nodes
+            # Import nodes (with cache)
             print(f"  Nodes: {nodes_file.name}", file=sys.stderr)
-            self.import_nodes(nodes_file, source_file)
+            self.import_nodes(nodes_file, source_file, source_text_cache)
 
             # Import edges
             if edges_file.exists():
                 print(f"  Edges: {edges_file.name}", file=sys.stderr)
                 edge_id_offset = self.import_edges(edges_file, source_file, edge_id_offset)
 
-            # Import NER nodes and edges
+            # Import NER nodes and edges (reuse cache!)
             if ner_nodes_file.exists():
                 print(f"  NER Nodes: {ner_nodes_file.name}", file=sys.stderr)
-                self.import_nodes(ner_nodes_file, source_file)
+                self.import_nodes(ner_nodes_file, source_file, source_text_cache)
 
             if ner_edges_file.exists():
                 print(f"  NER Edges: {ner_edges_file.name}", file=sys.stderr)
@@ -387,6 +465,9 @@ class BrainGraphDB:
                 print(f"  Embeddings: {embeddings_file.name}", file=sys.stderr)
                 self.import_embeddings(embeddings_file, source_file)
 
+            file_elapsed = time.time() - file_start
+            print(f"  → File imported in {file_elapsed:.2f}s", file=sys.stderr)
+
         # Import taxonomy
         print("\nImporting taxonomy...", file=sys.stderr)
         self.import_taxonomy()
@@ -395,12 +476,24 @@ class BrainGraphDB:
         """Build all indexes after data import."""
         print("\nBuilding indexes...", file=sys.stderr)
 
-        print("  VSS indexes (HNSW)...", file=sys.stderr)
+        import time
+
+        # Get chunk count for progress estimation
+        chunk_count = self.con.execute("SELECT COUNT(*) FROM chunk_embeddings_256d").fetchone()[0]
+        print(f"  VSS indexes (HNSW) for {chunk_count} chunks...", file=sys.stderr)
+
+        # HNSW parameters:
+        # - Default metric is l2sq (faster than cosine, similar results for normalized embeddings)
+        # - M: connections per layer (16 default)
+        # - ef_construction: search depth during build (128 default)
+        start = time.time()
         self.con.execute("""
             CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
             ON chunk_embeddings_256d
             USING HNSW (embedding)
         """)
+        elapsed = time.time() - start
+        print(f"    Chunk HNSW index built in {elapsed:.1f}s", file=sys.stderr)
 
         self.con.execute("""
             CREATE INDEX IF NOT EXISTS idx_taxonomy_embeddings_hnsw
@@ -440,8 +533,12 @@ class BrainGraphDB:
             print(f"    Warning: {stopwords_path} not found, using no stopwords", file=sys.stderr)
             stopwords_table = 'none'
 
-        print("  FTS index (BM25)...", file=sys.stderr)
+        # Get text node count
+        text_count = self.con.execute("SELECT COUNT(*) FROM nodes WHERE text IS NOT NULL OR summary IS NOT NULL").fetchone()[0]
+        print(f"  FTS index (BM25) for {text_count} text nodes...", file=sys.stderr)
+
         # Create FTS index with German stemmer and stopwords
+        start = time.time()
         self.con.execute(f"""
             PRAGMA create_fts_index(
                 'nodes', 'id', 'text', 'summary', 'title', 'description',
@@ -453,6 +550,8 @@ class BrainGraphDB:
                 overwrite=1
             )
         """)
+        elapsed = time.time() - start
+        print(f"    FTS index built in {elapsed:.1f}s", file=sys.stderr)
 
         print("  Property graph...", file=sys.stderr)
         try:

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/entity.schema.json",
+  "title": "Entity",
+  "description": "Named entity extracted from text (NER)",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^ent_[a-z0-9_-]+$",
+      "description": "Entity ID (ent_<normalized_name>)"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID for this entity node"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["PER", "LOC", "ORG", "MISC"],
+      "description": "Named entity type (spaCy NER categories)"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Entity name/title"
+    },
+    "occurrences": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of times entity appears in document"
+    },
+    "mentioned_in": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^chunk_[a-f0-9]{8,12}$"
+      },
+      "description": "Chunk IDs where entity is mentioned"
+    }
+  },
+  "required": ["id", "ulid", "entity_type", "title", "occurrences", "mentioned_in"],
+  "additionalProperties": false
+}
