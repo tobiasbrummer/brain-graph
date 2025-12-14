@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from typing import Any
 import pyarrow as pa
 import pyarrow.parquet as pq
 from openai import OpenAI
+
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
@@ -118,50 +121,83 @@ def save_parquet(
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Embed taxonomy categories")
     parser.add_argument("-i", "--input", type=Path, default=Path(".brain_graph/config/taxonomy.md.nodes.json"),
                         help="Input taxonomy nodes.json")
     parser.add_argument("-o", "--output", type=Path, default=Path(".brain_graph/config/taxonomy.md.parquet"),
                         help="Output Parquet file")
     parser.add_argument("-c", "--config", type=Path, help="config.json path", default=Path(".brain_graph/config/config.json"))
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"Error: Input file not found: {args.input}", file=sys.stderr)
-        sys.exit(1)
+    try:
+        if not args.input.exists():
+            raise FileNotFoundError(f"Input file not found: {args.input}")
 
-    # Config laden
-    config = load_config(args.config)
+        # Config laden
+        config = load_config(args.config)
 
-    # Lade Kategorien
-    categories = json.loads(args.input.read_text(encoding="utf-8"))
-    print(f"Loaded {len(categories)} categories", file=sys.stderr)
+        # Lade Kategorien
+        categories = json.loads(args.input.read_text(encoding="utf-8"))
+        print(f"Loaded {len(categories)} categories", file=sys.stderr)
 
-    # Konvertiere zu Texten
-    texts = []
-    category_ids = []
-    for cat in categories:
-        text = category_to_text(cat)
-        if text:
-            texts.append(text)
-            category_ids.append(cat["id"])
+        # Konvertiere zu Texten
+        texts = []
+        category_ids = []
+        for cat in categories:
+            text = category_to_text(cat)
+            if text:
+                texts.append(text)
+                category_ids.append(cat["id"])
 
-    print(texts)
-    print(f"Prepared {len(texts)} texts for embedding", file=sys.stderr)
+        print(f"Prepared {len(texts)} texts for embedding", file=sys.stderr)
 
-    # Embeddings erzeugen
-    embeddings = embed_texts(texts, config)
+        if not texts:
+            raise ValueError("No category texts prepared for embedding")
 
-    # Dimension validieren
-    actual_dim = len(embeddings[0])
-    if actual_dim != config["embedding_dim"]:
-        print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}",
-              file=sys.stderr)
+        # Embeddings erzeugen
+        embeddings = embed_texts(texts, config)
 
-    # Speichern
-    save_parquet(category_ids, embeddings, args.output, config)
-    print(f"Written {args.output} ({len(embeddings)} embeddings)", file=sys.stderr)
+        # Dimension validieren
+        actual_dim = len(embeddings[0])
+        if actual_dim != config["embedding_dim"]:
+            print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}", file=sys.stderr)
+
+        # Speichern
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        save_parquet(category_ids, embeddings, args.output, config)
+        print(f"Written {args.output} ({len(embeddings)} embeddings)", file=sys.stderr)
+
+        result = ok_result(
+            "taxonomy_embedder",
+            input=str(args.input),
+            output={"parquet": str(args.output)},
+            counts={"categories": len(categories), "texts_embedded": len(embeddings)},
+            embedding={"model": config.get("embedding_model"), "dim": actual_dim},
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        else:
+            print(f"Written {args.output} ({len(embeddings)} embeddings)")
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(
+                error_result("taxonomy_embedder", e, include_traceback=args.debug, duration_ms=ms_since(start)),
+                pretty=args.pretty,
+            )
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

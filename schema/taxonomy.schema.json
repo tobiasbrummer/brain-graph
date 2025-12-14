@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/taxonomy.schema.json",
+  "title": "Taxonomy",
+  "description": "Taxonomy category node for classification",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Category slug (kebab-case)"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID for this category"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["category"],
+      "description": "Node type (always 'category' for taxonomy)"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable category name"
+    },
+    "description": {
+      "type": ["string", "null"],
+      "description": "Category description for LLM understanding"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Keywords/synonyms for matching"
+    },
+    "embedding": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "number"
+      },
+      "description": "Vector embedding (if available)"
+    }
+  },
+  "required": ["id", "ulid", "type", "title"],
+  "additionalProperties": false
+}

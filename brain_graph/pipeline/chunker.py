@@ -15,6 +15,7 @@ import hashlib
 import json
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ from typing import Any
 
 import ulid
 import pysbd
+import xxhash
 import mq as markdown_query
 from langdetect import detect, LangDetectException
 
@@ -33,6 +35,7 @@ from file_utils import (
     get_source_hash,
     get_source_version
 )
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 # -----------------------------------------------------------------------------
 # Config
@@ -185,8 +188,8 @@ def parse_markdown(text: str) -> list[Block]:
     for marker in markers:
         # Text vor diesem Marker?
         if marker.start > last_end:
-            text_content = text[last_end:marker.start].strip()
-            if text_content:
+            text_content = text[last_end:marker.start]
+            if text_content.strip():
                 blocks.append(Block(
                     type="text",
                     content=text_content,
@@ -216,8 +219,8 @@ def parse_markdown(text: str) -> list[Block]:
     
     # Text nach letztem Marker
     if last_end < len(text):
-        text_content = text[last_end:].strip()
-        if text_content:
+        text_content = text[last_end:]
+        if text_content.strip():
             blocks.append(Block(
                 type="text",
                 content=text_content,
@@ -555,8 +558,8 @@ def build_graph(
         return segmenter_cache[lang]
     
     def make_id(prefix: str, content: str) -> str:
-        """Erstellt eine ID aus Prefix und Content-Hash."""
-        short_hash = hashlib.sha1(content.encode()).hexdigest()[:8]
+        """Erstellt eine ID aus Prefix und Content-Hash (xxhash64)."""
+        short_hash = xxhash.xxh64(content.encode()).hexdigest()[:8]
         return f"{prefix}_{short_hash}"
     
     for block in blocks:
@@ -702,6 +705,7 @@ def build_graph(
 # -----------------------------------------------------------------------------
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Chunk Markdown to graph")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Input Markdown file")
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
@@ -713,166 +717,210 @@ def main():
                         help="Delete source file after processing (default: keep)")
     parser.add_argument("--force", action="store_true",
                         help="Force processing even if vault file unchanged")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"File not found: {args.input}", file=sys.stderr)
-        sys.exit(1)
-
-    # Config laden
-    config = load_config(args.config)
-
-    # Markdown parsen
-    text = args.input.read_text(encoding="utf-8")
-
-    # ULID generieren/extrahieren und in MD injizieren
-    doc_ulid = get_or_generate_ulid(args.input, text)
-    print(f"Document ULID: {doc_ulid}", file=sys.stderr)
-
-    # Vault-Pfad generieren und Datei kopieren
-    from file_utils import get_month_folder, slugify
-
-    # Monat aus Input-Pfad nutzen (falls vault/YYYY-MM/) oder aktuellen Monat
-    parent_name = args.input.parent.name
-    if re.match(r'^\d{4}-\d{2}$', parent_name):
-        month = parent_name
-    else:
-        month = get_month_folder()
-
-    # ULID-Suffix aus stem entfernen (falls Reprocessing von vault-Datei)
-    stem = re.sub(r'-[A-Z0-9]{6}$', '', args.input.stem, flags=re.IGNORECASE)
-    slug = slugify(stem)
-    ulid_suffix = doc_ulid[-6:]
-    vault_filename = f"{slug}-{ulid_suffix}.md"
-    vault_path = args.vault_dir / month / vault_filename
-
-    # Vault-Verzeichnis erstellen
-    vault_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Skip-Logik: Wenn vault existiert und hash gleich
-    vault_unchanged = False
-    input_is_vault_target = False
     try:
-        input_is_vault_target = args.input.resolve() == vault_path.resolve()
-    except OSError:
-        # Fallback for non-resolvable paths (should be rare since input exists)
-        input_is_vault_target = args.input.absolute() == vault_path.absolute()
+        if not args.input.exists():
+            raise FileNotFoundError(f"File not found: {args.input}")
 
-    if input_is_vault_target:
-        print("✓ Input already at vault path, skipping copy", file=sys.stderr)
-        vault_unchanged = True
-    elif vault_path.exists() and not args.force:
-        vault_hash = get_source_hash(vault_path)
-        input_hash = get_source_hash(args.input)
+        # Config laden
+        config = load_config(args.config)
 
-        if vault_hash == input_hash:
-            print("✓ Vault file unchanged, skipping copy", file=sys.stderr)
-            vault_unchanged = True
+        # Markdown parsen
+        text = args.input.read_text(encoding="utf-8")
+        had_ulid = bool(re.search(r"\+id:[A-Z0-9]{26}", text))
+
+        # ULID generieren/extrahieren und in MD injizieren
+        doc_ulid = get_or_generate_ulid(args.input, text)
+        print(f"Document ULID: {doc_ulid}", file=sys.stderr)
+
+        # Vault-Pfad generieren und Datei kopieren
+        from file_utils import get_month_folder, slugify
+
+        # Monat aus Input-Pfad nutzen (falls vault/YYYY-MM/) oder aktuellen Monat
+        parent_name = args.input.parent.name
+        if re.match(r'^\d{4}-\d{2}$', parent_name):
+            month = parent_name
         else:
-            print("✎ Vault file changed, updating...", file=sys.stderr)
+            month = get_month_folder()
 
-    # Datei nach vault kopieren (mit aktualisierter ULID)
-    if not vault_unchanged:
-        import shutil
+        # ULID-Suffix aus stem entfernen (falls Reprocessing von vault-Datei)
+        stem = re.sub(r'-[A-Z0-9]{6}$', '', args.input.stem, flags=re.IGNORECASE)
+        slug = slugify(stem)
+        ulid_suffix = doc_ulid[-6:]
+        vault_filename = f"{slug}-{ulid_suffix}.md"
+        vault_path = args.vault_dir / month / vault_filename
+
+        # Vault-Verzeichnis erstellen
+        vault_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Skip-Logik: Wenn vault existiert und hash gleich
+        vault_unchanged = False
+        input_is_vault_target = False
         try:
-            shutil.copy2(args.input, vault_path)
-            print(f"Copied to vault: {vault_path}", file=sys.stderr)
-        except shutil.SameFileError:
-            print("✓ Input already at vault path, skipping copy", file=sys.stderr)
+            input_is_vault_target = args.input.resolve() == vault_path.resolve()
+        except OSError:
+            # Fallback for non-resolvable paths (should be rare since input exists)
+            input_is_vault_target = args.input.absolute() == vault_path.absolute()
 
-    # Optional: Originaldatei löschen
-    if args.delete_source:
         if input_is_vault_target:
-            print("Warning: --delete-source ignored (input is already in vault)", file=sys.stderr)
-        else:
-            args.input.unlink()
-            print(f"Deleted source: {args.input}", file=sys.stderr)
+            print("✓ Input already at vault path, skipping copy", file=sys.stderr)
+            vault_unchanged = True
+        elif vault_path.exists() and not args.force:
+            vault_hash = get_source_hash(vault_path)
+            input_hash = get_source_hash(args.input)
 
-    # Ab jetzt mit vault-Datei arbeiten
-    working_file = vault_path
+            if vault_hash == input_hash:
+                print("✓ Vault file unchanged, skipping copy", file=sys.stderr)
+                vault_unchanged = True
+            else:
+                print("✎ Vault file changed, updating...", file=sys.stderr)
 
-    # Output-Pfade basierend auf vault-Datei generieren
-    output_paths = get_output_paths(working_file, doc_ulid, args.base_dir)
-    ensure_output_dirs(output_paths)
+        copied_to_vault = (not vault_unchanged) and (not input_is_vault_target)
+        # Datei nach vault kopieren (mit aktualisierter ULID)
+        if copied_to_vault:
+            import shutil
+            try:
+                shutil.copy2(args.input, vault_path)
+                print(f"Copied to vault: {vault_path}", file=sys.stderr)
+            except shutil.SameFileError:
+                copied_to_vault = False
+                print("✓ Input already at vault path, skipping copy", file=sys.stderr)
 
-    # Blocks parsen
-    blocks = parse_markdown(text)
-    print(f"Parsed {len(blocks)} blocks", file=sys.stderr)
+        deleted_source = False
+        # Optional: Originaldatei löschen
+        if args.delete_source:
+            if input_is_vault_target:
+                print("Warning: --delete-source ignored (input is already in vault)", file=sys.stderr)
+            else:
+                args.input.unlink()
+                deleted_source = True
+                print(f"Deleted source: {args.input}", file=sys.stderr)
 
-    # Graph bauen (mit automatischer Spracherkennung pro Block)
-    nodes, edges = build_graph(blocks, args.input.name, config)
+        # Ab jetzt mit vault-Datei arbeiten
+        working_file = vault_path
+        text = working_file.read_text(encoding="utf-8")
 
-    # Nodes und Edges mit leeren Feldern für spätere Schritte erweitern
-    nodes_data = []
-    for n in nodes:
-        node_dict = n.to_dict()
-        # Füge leere Felder hinzu, die von späteren Schritten gefüllt werden
-        if n.type == "chunk":
-            node_dict.setdefault("summary", None)
-            node_dict.setdefault("categories", [])
-        nodes_data.append(node_dict)
+        # Output-Pfade basierend auf vault-Datei generieren
+        output_paths = get_output_paths(working_file, doc_ulid, args.base_dir)
+        ensure_output_dirs(output_paths)
 
-    edges_data = [e.to_dict() for e in edges]
+        # Blocks parsen
+        blocks = parse_markdown(text)
+        print(f"Parsed {len(blocks)} blocks", file=sys.stderr)
 
-    # JSON schreiben
-    output_paths['nodes'].write_text(
-        json.dumps(nodes_data, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
-    output_paths['edges'].write_text(
-        json.dumps(edges_data, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
+        # Graph bauen (mit automatischer Spracherkennung pro Block)
+        nodes, edges = build_graph(blocks, working_file.name, config)
 
-    # meta.json erstellen
-    now = datetime.now(timezone.utc)
+        # Nodes und Edges mit leeren Feldern für spätere Schritte erweitern
+        nodes_data = []
+        for n in nodes:
+            node_dict = n.to_dict()
+            # Füge leere Felder hinzu, die von späteren Schritten gefüllt werden
+            if n.type == "chunk":
+                node_dict.setdefault("summary", None)
+                node_dict.setdefault("categories", [])
+            nodes_data.append(node_dict)
 
-    # Source hash und git version
-    source_hash = get_source_hash(vault_path)
-    git_info = get_source_version(vault_path)
+        edges_data = [e.to_dict() for e in edges]
 
-    meta = {
-        "source_file": str(vault_path),  # Vault-Pfad als canonical source
-        "original_source": str(args.input) if args.input != vault_path else None,
-        "ulid": doc_ulid,
-        "source_hash": source_hash,
-        "source_commit": git_info["source_commit"],
-        "source_commit_date": git_info["source_commit_date"],
-        "source_dirty": git_info["source_dirty"],
-        "created_at": now.isoformat(),
-        "modified_at": now.isoformat(),
-        "uses": 1,
-        "importance": None,  # Wird von Taxonomie vererbt
-        "decay": None,       # Wird von Taxonomie vererbt
-        "categories": [],    # Wird von taxonomy_matcher gefüllt
-        "processing_steps": [
-            {
-                "step": "chunking",
-                "completed": True,
-                "timestamp": now.isoformat(),
-                "node_count": len(nodes),
-                "edge_count": len(edges)
-            }
-        ]
-    }
+        # JSON schreiben
+        output_paths['nodes'].write_text(
+            json.dumps(nodes_data, ensure_ascii=False, indent=2),
+            encoding='utf-8'
+        )
+        output_paths['edges'].write_text(
+            json.dumps(edges_data, ensure_ascii=False, indent=2),
+            encoding='utf-8'
+        )
 
-    output_paths['meta'].write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2),
-        encoding='utf-8'
-    )
+        # meta.json erstellen
+        now = datetime.now(timezone.utc)
 
-    # Stats
-    node_types = {}
-    for n in nodes:
-        node_types[n.type] = node_types.get(n.type, 0) + 1
+        # Source hash und git version
+        source_hash = get_source_hash(vault_path)
+        git_info = get_source_version(vault_path)
 
-    edge_types = {}
-    for e in edges:
-        edge_types[e.type] = edge_types.get(e.type, 0) + 1
+        meta = {
+            "source_file": str(vault_path),  # Vault-Pfad als canonical source
+            "original_source": str(args.input) if args.input != vault_path else None,
+            "ulid": doc_ulid,
+            "source_hash": source_hash,
+            "source_commit": git_info["source_commit"],
+            "source_commit_date": git_info["source_commit_date"],
+            "source_dirty": git_info["source_dirty"],
+            "created_at": now.isoformat(),
+            "modified_at": now.isoformat(),
+            "uses": 1,
+            "importance": None,  # Wird von Taxonomie vererbt
+            "decay": None,       # Wird von Taxonomie vererbt
+            "categories": [],    # Wird von taxonomy_matcher gefüllt
+            "processing_steps": [
+                {
+                    "step": "chunking",
+                    "completed": True,
+                    "timestamp": now.isoformat(),
+                    "node_count": len(nodes),
+                    "edge_count": len(edges)
+                }
+            ]
+        }
 
-    print(f"Written {output_paths['nodes']} ({len(nodes)} nodes: {node_types})", file=sys.stderr)
-    print(f"Written {output_paths['edges']} ({len(edges)} edges: {edge_types})", file=sys.stderr)
-    print(f"Written {output_paths['meta']}", file=sys.stderr)
+        output_paths['meta'].write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2),
+            encoding='utf-8'
+        )
+
+        # Stats
+        node_types = {}
+        for n in nodes:
+            node_types[n.type] = node_types.get(n.type, 0) + 1
+
+        edge_types = {}
+        for e in edges:
+            edge_types[e.type] = edge_types.get(e.type, 0) + 1
+
+        print(f"Written {output_paths['nodes']} ({len(nodes)} nodes: {node_types})", file=sys.stderr)
+        print(f"Written {output_paths['edges']} ({len(edges)} edges: {edge_types})", file=sys.stderr)
+        print(f"Written {output_paths['meta']}", file=sys.stderr)
+
+        result = ok_result(
+            "chunker",
+            input=str(args.input),
+            doc_ulid=doc_ulid,
+            id_was_in_source=had_ulid,
+            copied_to_vault=copied_to_vault,
+            deleted_source=deleted_source,
+            vault_path=str(vault_path),
+            output={
+                "nodes": str(output_paths["nodes"]),
+                "edges": str(output_paths["edges"]),
+                "meta": str(output_paths["meta"]),
+            },
+            counts={
+                "nodes": len(nodes),
+                "edges": len(edges),
+                "nodes_by_type": node_types,
+                "edges_by_type": edge_types,
+            },
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(error_result("chunker", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            return 1
+        raise
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

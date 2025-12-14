@@ -7,8 +7,8 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^sec_[a-f0-9]{8,12}$",
-      "description": "Short section ID (sec_<hash>)"
+      "pattern": "^(sec_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$",
+      "description": "Section ID (short: sec_<hash> or ULID)"
     },
     "ulid": {
       "type": "string",

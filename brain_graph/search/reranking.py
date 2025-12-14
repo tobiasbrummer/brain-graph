@@ -306,6 +306,8 @@ def rerank_with_full_vectors(
     query_embedding_full: list[float],
     parquet_path: str | Path,
     top_k: int = 10,
+    *,
+    id_map: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Re-rank candidates using full 1024-dim vectors from Parquet.
@@ -339,7 +341,7 @@ def rerank_with_full_vectors(
     query_vec = np.array(query_embedding_full)
     query_norm = np.linalg.norm(query_vec)
 
-    scores = []
+    scores: list[dict[str, Any]] = []
     for _, row in candidate_df.iterrows():
         full_vec = np.array(row["embedding"])
         full_norm = np.linalg.norm(full_vec)
@@ -347,11 +349,59 @@ def rerank_with_full_vectors(
         # Cosine similarity
         similarity = float(np.dot(query_vec, full_vec) / (query_norm * full_norm))
 
-        scores.append({"chunk_id": row["chunk_idx"], "similarity": similarity})
+        chunk_idx = row["chunk_idx"]
+        mapped_id = id_map.get(chunk_idx, chunk_idx) if id_map else chunk_idx
+        scores.append({"chunk_id": mapped_id, "similarity": similarity})
 
     # Sort by similarity and return top-k
     scores.sort(key=lambda x: x["similarity"], reverse=True)
     return scores[:top_k]
+
+
+def _get_parquet_id_map(
+    con: duckdb.DuckDBPyConnection,
+    source_file: str,
+    candidate_ids: list[str],
+) -> tuple[list[str], dict[str, str] | None]:
+    """
+    Map DB chunk IDs to Parquet chunk_idx IDs for full-vector reranking.
+
+    - New DBs use `nodes.id == chunk_ulid` and store the original parquet key in
+      `chunk_embeddings_256d.chunk_local_id`.
+    - Legacy DBs use `nodes.id == chunk_idx` and don't need mapping.
+
+    Returns:
+        (parquet_candidate_ids, parquet_id_to_db_id_map)
+    """
+    if not candidate_ids:
+        return [], None
+
+    try:
+        rows = con.execute(
+            """
+            SELECT chunk_id, chunk_local_id
+            FROM chunk_embeddings_256d
+            WHERE source_file = ?
+              AND chunk_id IN (SELECT UNNEST(?::VARCHAR[]))
+            """,
+            [source_file, candidate_ids],
+        ).fetchall()
+    except duckdb.Error:
+        # Old schema: candidate IDs are already parquet chunk_idx values.
+        return candidate_ids, None
+
+    parquet_ids: list[str] = []
+    id_map: dict[str, str] = {}
+    for db_id, parquet_id in rows:
+        if parquet_id:
+            parquet_ids.append(parquet_id)
+            id_map[parquet_id] = db_id
+
+    if not id_map:
+        # Either legacy DB (no mapping populated) or embeddings missing.
+        return candidate_ids, None
+
+    return parquet_ids, id_map
 
 
 def semantic_search_with_reranking(
@@ -432,8 +482,13 @@ def semantic_search_with_reranking(
 
         # Re-rank these candidates
         chunk_ids = [c["id"] for c in chunks]
+        parquet_ids, id_map = _get_parquet_id_map(con, source, chunk_ids)
         scores = rerank_with_full_vectors(
-            chunk_ids, query_embedding_full, parquet_path, final_k
+            parquet_ids,
+            query_embedding_full,
+            parquet_path,
+            final_k,
+            id_map=id_map,
         )
 
         # Merge with text/summary
@@ -576,8 +631,13 @@ def hybrid_search_with_reranking(
 
         # Re-rank with full vectors
         chunk_ids = [c["id"] for c in chunks]
+        parquet_ids, id_map = _get_parquet_id_map(con, source, chunk_ids)
         scores = rerank_with_full_vectors(
-            chunk_ids, query_embedding_full, parquet_path, len(chunk_ids)
+            parquet_ids,
+            query_embedding_full,
+            parquet_path,
+            len(chunk_ids),
+            id_map=id_map,
         )
 
         # Re-compute hybrid scores with full-vector semantic scores
@@ -864,8 +924,13 @@ def multiway_search_with_rrf(
 
             # Re-rank with full vectors
             chunk_ids = [c["chunk_id"] for c in chunks]
+            parquet_ids, id_map = _get_parquet_id_map(con, source, chunk_ids)
             scores = rerank_with_full_vectors(
-                chunk_ids, query_embedding_full, parquet_path, len(chunk_ids)
+                parquet_ids,
+                query_embedding_full,
+                parquet_path,
+                len(chunk_ids),
+                id_map=id_map,
             )
 
             # Merge scores

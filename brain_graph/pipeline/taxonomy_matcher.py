@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ from file_utils import (
     get_output_paths,
     update_meta
 )
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def load_embeddings(parquet_path: Path) -> tuple[list[str], np.ndarray]:
@@ -200,6 +202,7 @@ def apply_categories(
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Match chunks to taxonomy via embeddings")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
     parser.add_argument("-t", "--taxonomy", type=Path, default=Path(".brain_graph/config/taxonomy.md.parquet"),
@@ -214,102 +217,139 @@ def main():
                         help="Maximum gap between top category and next category")
     parser.add_argument("--verbose", action="store_true",
                         help="Print similarity scores")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
-        sys.exit(1)
+    try:
+        if not args.input.exists():
+            raise FileNotFoundError(f"Source file not found: {args.input}")
 
-    # ULID extrahieren
-    doc_ulid = extract_ulid_from_md(args.input)
-    if not doc_ulid:
-        print(f"Error: No ULID found in {args.input}", file=sys.stderr)
-        sys.exit(1)
+        # ULID extrahieren
+        doc_ulid = extract_ulid_from_md(args.input)
+        if not doc_ulid:
+            raise ValueError(f"No ULID found in {args.input}")
 
-    # Pfade ermitteln
-    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+        # Pfade ermitteln
+        output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-    # Prüfe ob Embeddings existieren
-    if not output_paths['embeddings'].exists():
-        print(f"Error: Embeddings not found: {output_paths['embeddings']}", file=sys.stderr)
-        print("Run embedder.py first.", file=sys.stderr)
-        sys.exit(1)
+        # Prüfe ob Embeddings existieren
+        if not output_paths['embeddings'].exists():
+            raise FileNotFoundError(f"Embeddings not found: {output_paths['embeddings']} (run embedder.py first)")
 
-    if not args.taxonomy.exists():
-        print(f"Error: Taxonomy parquet not found: {args.taxonomy}", file=sys.stderr)
-        sys.exit(1)
+        if not args.taxonomy.exists():
+            raise FileNotFoundError(f"Taxonomy parquet not found: {args.taxonomy}")
 
-    # Lade Embeddings
-    print("Loading embeddings...", file=sys.stderr)
-    chunk_ids, chunk_embeddings = load_embeddings(output_paths['embeddings'])
-    category_ids, category_embeddings = load_embeddings(args.taxonomy)
+        # Lade Embeddings
+        print("Loading embeddings...", file=sys.stderr)
+        chunk_ids, chunk_embeddings = load_embeddings(output_paths['embeddings'])
+        category_ids, category_embeddings = load_embeddings(args.taxonomy)
 
-    print(f"Loaded {len(chunk_ids)} chunks, {len(category_ids)} categories", file=sys.stderr)
+        print(f"Loaded {len(chunk_ids)} chunks, {len(category_ids)} categories", file=sys.stderr)
 
-    # Match Categories
-    print("Matching categories...", file=sys.stderr)
-    if args.verbose:
-        print(f"  Parameters: top_n={args.top_n}, min_similarity={args.min_similarity}, max_gap={args.max_gap}", file=sys.stderr)
+        # Match Categories
+        print("Matching categories...", file=sys.stderr)
+        if args.verbose:
+            print(
+                f"  Parameters: top_n={args.top_n}, min_similarity={args.min_similarity}, max_gap={args.max_gap}",
+                file=sys.stderr,
+            )
 
-    matches = match_categories(
-        chunk_ids, chunk_embeddings,
-        category_ids, category_embeddings,
-        top_n=args.top_n,
-        min_similarity=args.min_similarity,
-        max_gap=args.max_gap,
-        verbose=args.verbose,
-    )
+        matches = match_categories(
+            chunk_ids,
+            chunk_embeddings,
+            category_ids,
+            category_embeddings,
+            top_n=args.top_n,
+            min_similarity=args.min_similarity,
+            max_gap=args.max_gap,
+            verbose=args.verbose,
+        )
 
-    print(f"Found matches for {len(matches)} chunks", file=sys.stderr)
+        print(f"Found matches for {len(matches)} chunks", file=sys.stderr)
 
-    # Lade Nodes
-    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+        # Lade Nodes
+        nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
 
-    # Apply Categories (inkrementell)
-    updated_nodes, category_edges = apply_categories(nodes, matches)
+        # Apply Categories (inkrementell)
+        updated_nodes, category_edges = apply_categories(nodes, matches)
 
-    # Count
-    classified = sum(1 for n in updated_nodes if "categories" in n and n["categories"])
-    total_assignments = sum(len(n.get("categories", [])) for n in updated_nodes)
+        # Count
+        classified = sum(1 for n in updated_nodes if "categories" in n and n["categories"])
+        total_assignments = sum(len(n.get("categories", [])) for n in updated_nodes)
 
-    print(f"Classified {classified} chunks with {total_assignments} category assignments", file=sys.stderr)
+        print(f"Classified {classified} chunks with {total_assignments} category assignments", file=sys.stderr)
 
-    # Schreibe nodes.json zurück (in-place update)
-    output_paths['nodes'].write_text(
-        json.dumps(updated_nodes, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-    print(f"Updated {output_paths['nodes']}", file=sys.stderr)
+        # Schreibe nodes.json zurück (in-place update)
+        output_paths['nodes'].write_text(
+            json.dumps(updated_nodes, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        print(f"Updated {output_paths['nodes']}", file=sys.stderr)
 
-    # Merge category-edges in edges.json
-    if output_paths['edges'].exists():
-        existing_edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
-        # Remove old category edges
-        existing_edges = [e for e in existing_edges if e.get('type') != 'categorized_as']
-        # Add new category edges
-        existing_edges.extend(category_edges)
-    else:
-        existing_edges = category_edges
+        # Merge category-edges in edges.json
+        if output_paths['edges'].exists():
+            existing_edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
+            # Remove old category edges
+            existing_edges = [e for e in existing_edges if e.get('type') != 'categorized_as']
+            # Add new category edges
+            existing_edges.extend(category_edges)
+        else:
+            existing_edges = category_edges
 
-    output_paths['edges'].write_text(
-        json.dumps(existing_edges, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-    print(f"Updated {output_paths['edges']} ({len(category_edges)} category edges)", file=sys.stderr)
+        output_paths['edges'].write_text(
+            json.dumps(existing_edges, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        print(f"Updated {output_paths['edges']} ({len(category_edges)} category edges)", file=sys.stderr)
 
-    # Update meta.json
-    update_meta(output_paths['meta'], {
-        "step": "taxonomy_matching",
-        "classified_chunks": classified,
-        "total_assignments": total_assignments,
-        "parameters": {
-            "top_n": args.top_n,
-            "min_similarity": args.min_similarity,
-            "max_gap": args.max_gap
-        }
-    })
-    print(f"Updated {output_paths['meta']}", file=sys.stderr)
+        # Update meta.json
+        update_meta(
+            output_paths['meta'],
+            {
+                "step": "taxonomy_matching",
+                "classified_chunks": classified,
+                "total_assignments": total_assignments,
+                "parameters": {"top_n": args.top_n, "min_similarity": args.min_similarity, "max_gap": args.max_gap},
+            },
+        )
+        print(f"Updated {output_paths['meta']}", file=sys.stderr)
+
+        result = ok_result(
+            "taxonomy_matcher",
+            input=str(args.input),
+            doc_ulid=doc_ulid,
+            output={
+                "nodes": str(output_paths["nodes"]),
+                "edges": str(output_paths["edges"]),
+                "meta": str(output_paths["meta"]),
+            },
+            counts={
+                "classified_chunks": classified,
+                "total_assignments": total_assignments,
+                "category_edges": len(category_edges),
+            },
+            parameters={"top_n": args.top_n, "min_similarity": args.min_similarity, "max_gap": args.max_gap},
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(
+                error_result("taxonomy_matcher", e, include_traceback=args.debug, duration_ms=ms_since(start)),
+                pretty=args.pretty,
+            )
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

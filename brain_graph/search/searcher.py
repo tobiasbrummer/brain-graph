@@ -8,11 +8,13 @@ Supports semantic search, BM25 full-text search, and hybrid search.
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 import duckdb
 from openai import OpenAI
 
+from cli_utils import emit_json, error_result, ms_since, ok_result
 from file_utils import load_config
 
 
@@ -451,6 +453,7 @@ def print_results(results: list[dict], mode: str):
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Search brain-graph database")
     parser.add_argument("query", help="Search query")
     parser.add_argument(
@@ -479,152 +482,174 @@ def main():
         default=None,
         help="Config file path (default: auto-detect)",
     )
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    # Check if DB exists, otherwise build from data directory
-    db_path = Path(args.db)
-    data_dir = Path(".brain_graph/data")
+    con: duckdb.DuckDBPyConnection | None = None
 
-    if not db_path.exists():
-        if data_dir.exists() and any(data_dir.rglob("*.nodes.json")):
-            print(f"Database not found, building from {data_dir}...", file=sys.stderr)
-            from build_db import BrainGraphDB
+    def _load_extension_safe(ext: str) -> None:
+        assert con is not None
+        try:
+            con.execute(f"LOAD {ext};")
+        except duckdb.Error:
+            try:
+                con.execute(f"INSTALL {ext};")
+                con.execute(f"LOAD {ext};")
+            except duckdb.Error as e:
+                print(f"Warning: Could not load DuckDB extension '{ext}' ({e})", file=sys.stderr)
 
-            # Build in-memory database
-            db = BrainGraphDB(":memory:")
-            db.import_directory(data_dir)
-            db.build_indexes()
+    try:
+        # Check if DB exists, otherwise build from data directory
+        db_path = Path(args.db)
+        data_dir = Path(".brain_graph/data")
 
-            # Use the connection from BrainGraphDB
-            con = db.con
+        if not db_path.exists():
+            if data_dir.exists() and any(data_dir.rglob("*.nodes.json")):
+                print(f"Database not found, building from {data_dir}...", file=sys.stderr)
+                from build_db import BrainGraphDB
 
-            print(f"✓ Database ready", file=sys.stderr)
-            # Skip the normal loading process below
-            db_path = None
-        else:
-            print(f"Error: Database not found: {db_path}", file=sys.stderr)
-            print(f"And no data found in {data_dir}", file=sys.stderr)
-            print("Run 'python build_db.py' first to create data.", file=sys.stderr)
-            sys.exit(1)
+                db = BrainGraphDB(":memory:")
+                db.import_directory(data_dir)
+                db.build_indexes()
+                con = db.con
+                print("Database ready", file=sys.stderr)
+                db_path = None
+            else:
+                raise FileNotFoundError(f"Database not found: {db_path}")
 
-    # Load config
-    config = load_config(args.config)
+        # Load config
+        config = load_config(args.config)
 
-    # Load database if not already loaded
-    if db_path is not None:
-        # Load database into memory for faster search
-        print(f"Loading database into memory...", file=sys.stderr)
-        con = duckdb.connect(":memory:")
+        # Load database if not already loaded
+        if db_path is not None:
+            print("Loading database into memory...", file=sys.stderr)
+            con = duckdb.connect(":memory:")
 
-        # Attach disk database and copy to memory
-        con.execute(f"ATTACH '{db_path}' AS disk_db (READ_ONLY)")
+            con.execute(f"ATTACH '{db_path}' AS disk_db (READ_ONLY)")
 
-        # Copy main tables (exclude internal FTS tables)
-        main_tables = [
-            "nodes",
-            "edges",
-            "chunk_embeddings_256d",
-            "taxonomy_embeddings_256d",
-            "embedding_sources",
-            "meta",
-            "german_stopwords",
-        ]
+            main_tables = [
+                "nodes",
+                "edges",
+                "chunk_embeddings_256d",
+                "taxonomy_embeddings_256d",
+                "embedding_sources",
+                "meta",
+                "german_stopwords",
+            ]
 
-        for table_name in main_tables:
-            # Check if table exists before copying
-            exists = con.execute(
-                f"SELECT COUNT(*) FROM duckdb_tables() WHERE database_name='disk_db' AND table_name='{table_name}'"
-            ).fetchone()[0]
-            if exists:
-                print(f"  Loading table: {table_name}", file=sys.stderr)
-                con.execute(
-                    f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}"
-                )
+            for table_name in main_tables:
+                exists = con.execute(
+                    f"SELECT COUNT(*) FROM duckdb_tables() WHERE database_name='disk_db' AND table_name='{table_name}'"
+                ).fetchone()[0]
+                if exists:
+                    print(f"  Loading table: {table_name}", file=sys.stderr)
+                    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}")
 
-        # Detach disk database (now everything is in memory)
-        con.execute("DETACH disk_db")
+            con.execute("DETACH disk_db")
 
-        # Rebuild indexes for fast search
-        print(f"Building indexes...", file=sys.stderr)
+            print("Building indexes...", file=sys.stderr)
 
-        # VSS extension
-        con.execute("INSTALL vss; LOAD vss;")
-
-        # HNSW index for vector search
-        con.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
-            ON chunk_embeddings_256d
-            USING HNSW (embedding)
-            WITH (metric = 'cosine')
-        """
-        )
-
-        # FTS extension
-        con.execute("INSTALL fts; LOAD fts;")
-
-        # Full-text search index with German stemmer and stopwords
-        # Check if german_stopwords table exists (copied from disk DB)
-        has_stopwords = (
+            _load_extension_safe("vss")
             con.execute(
-                "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
-            ).fetchone()[0]
-            > 0
-        )
-
-        stopwords_param = "german_stopwords" if has_stopwords else "none"
-
-        con.execute(
-            f"""
-            PRAGMA create_fts_index(
-                'nodes', 'id', 'text', 'summary', 'title', 'description',
-                stemmer='german',
-                stopwords='{stopwords_param}',
-                ignore='(\\.|[^a-zäöüß])+',
-                strip_accents=1,
-                lower=1,
-                overwrite=1
+                """
+                CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
+                ON chunk_embeddings_256d
+                USING HNSW (embedding)
+                WITH (metric = 'cosine')
+            """
             )
-        """
-        )
 
-        print(f"✓ Database ready (indexes built)", file=sys.stderr)
-    # else: con is already set from the BrainGraphDB build above
+            _load_extension_safe("fts")
 
-    # Perform search
-    query_embedding = None
-    if args.mode in ["semantic", "hybrid"]:
-        print(f"Embedding query...", file=sys.stderr)
-        query_embedding = embed_query(args.query, config)
+            has_stopwords = (
+                con.execute(
+                    "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
+                ).fetchone()[0]
+                > 0
+            )
+            stopwords_param = "german_stopwords" if has_stopwords else "none"
+            con.execute(
+                f"""
+                PRAGMA create_fts_index(
+                    'nodes', 'id', 'text', 'summary', 'title', 'description',
+                    stemmer='german',
+                    stopwords='{stopwords_param}',
+                    ignore='(\\.|[^a-zäöüß])+',
+                    strip_accents=1,
+                    lower=1,
+                    overwrite=1
+                )
+            """
+            )
 
-    print(f"Searching with {args.mode} mode...", file=sys.stderr)
+            print("Database ready (indexes built)", file=sys.stderr)
 
-    if args.mode == "semantic":
-        results = semantic_search(con, query_embedding, args.limit)
-        score_key = "similarity"
-    elif args.mode == "bm25":
-        results = bm25_search(con, args.query, args.limit)
-        score_key = "bm25_score"
-    elif args.mode == "hybrid":
-        bm25_weight = 1.0 - args.semantic_weight
-        results = hybrid_search(
-            con,
-            args.query,
-            query_embedding,
-            args.limit,
-            args.semantic_weight,
-            bm25_weight,
-        )
-        score_key = "hybrid_score"
+        if con is None:
+            raise RuntimeError("Database connection not available")
 
-    # Deduplicate: only best chunk per document
-    results = deduplicate_by_document(results, score_key)
+        query_embedding = None
+        if args.mode in ["semantic", "hybrid"]:
+            print("Embedding query...", file=sys.stderr)
+            query_embedding = embed_query(args.query, config)
 
-    # Print results
-    print_results(results, args.mode)
+        print(f"Searching with {args.mode} mode...", file=sys.stderr)
 
-    con.close()
+        if args.mode == "semantic":
+            results = semantic_search(con, query_embedding, args.limit)
+            score_key = "similarity"
+        elif args.mode == "bm25":
+            results = bm25_search(con, args.query, args.limit)
+            score_key = "bm25_score"
+        else:
+            bm25_weight = 1.0 - args.semantic_weight
+            results = hybrid_search(
+                con,
+                args.query,
+                query_embedding,
+                args.limit,
+                args.semantic_weight,
+                bm25_weight,
+            )
+            score_key = "hybrid_score"
+
+        results = deduplicate_by_document(results, score_key)
+
+        if args.format == "json":
+            emit_json(
+                ok_result(
+                    "search",
+                    query=args.query,
+                    mode=args.mode,
+                    limit=args.limit,
+                    score_key=score_key,
+                    results=results,
+                    counts={"results": len(results)},
+                    duration_ms=ms_since(start),
+                ),
+                pretty=args.pretty,
+            )
+        else:
+            print_results(results, args.mode)
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(error_result("search", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            return 1
+        raise
+    finally:
+        if con is not None:
+            try:
+                con.close()
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

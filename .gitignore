@@ -19,3 +19,5 @@ PoC/
 test_data/
 vault/
 .brain_graph/data/
+.brain_graph/*.duckdb
+!.brain_graph/brain.duckdb

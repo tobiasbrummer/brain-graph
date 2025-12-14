@@ -11,8 +11,11 @@ Usage:
 import argparse
 import json
 import re
+import time
 from pathlib import Path
 from typing import Any
+
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 SECTION_RE = re.compile(r"^##\s+(.+)$")
@@ -80,33 +83,61 @@ def flatten_config(nested: dict[str, dict[str, Any]]) -> dict[str, Any]:
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Convert config.md to config.json")
     parser.add_argument("--input", type=Path, default=Path("config/config.md"),
                         help="Input config.md")
     parser.add_argument("--output", type=Path, default=Path(".brain_graph/config/config.json"),
                         help="Output config.json")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"Error: Input file not found: {args.input}")
-        return 1
+    try:
+        if not args.input.exists():
+            raise FileNotFoundError(f"Input file not found: {args.input}")
 
-    # Parse
-    text = args.input.read_text(encoding="utf-8")
-    nested_config = parse_config(text)
+        # Parse
+        text = args.input.read_text(encoding="utf-8")
+        nested_config = parse_config(text)
 
-    # Flatten für tool.pkms kompatibilität
-    flat_config = flatten_config(nested_config)
+        # Flatten für tool.pkms kompatibilität
+        flat_config = flatten_config(nested_config)
 
-    # Write
-    args.output.write_text(
-        json.dumps(flat_config, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
+        # Write
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(flat_config, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
 
-    print(f"Written {args.output} ({len(flat_config)} settings)")
-    return 0
+        result = ok_result(
+            "config_converter",
+            input=str(args.input),
+            output={"config": str(args.output)},
+            counts={"settings": len(flat_config), "sections": len(nested_config)},
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        else:
+            print(f"Written {args.output} ({len(flat_config)} settings)")
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(
+                error_result("config_converter", e, include_traceback=args.debug, duration_ms=ms_since(start)),
+                pretty=args.pretty,
+            )
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    exit(main())
+    raise SystemExit(main())

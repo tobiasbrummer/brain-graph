@@ -24,6 +24,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -37,8 +38,10 @@ from file_utils import (
     get_output_paths,
     ensure_output_dirs,
     load_config,
+    strip_ulid_lines,
     update_meta
 )
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def normalize_markdown(text: str) -> str:
@@ -50,6 +53,8 @@ def normalize_markdown(text: str) -> str:
     - Mehrfache Whitespace → einzelnes Space
     """
     import re
+
+    text = strip_ulid_lines(text)
 
     # Markdown-Links: [Text](URL) → Text
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
@@ -221,103 +226,123 @@ def save_parquet(
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Embed texts to Parquet")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
     parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
                         help="Base data directory (default: .brain_graph/data)")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
-        sys.exit(1)
+    try:
+        if not args.input.exists():
+            raise FileNotFoundError(f"Source file not found: {args.input}")
 
-    # Config laden
-    config = load_config(args.config)
+        # Config laden
+        config = load_config(args.config)
 
-    # ULID aus Markdown extrahieren
-    doc_ulid = extract_ulid_from_md(args.input)
-    if not doc_ulid:
-        print(f"Error: No ULID found in {args.input}. Run chunker.py first.", file=sys.stderr)
-        sys.exit(1)
+        # ULID aus Markdown extrahieren
+        doc_ulid = extract_ulid_from_md(args.input)
+        if not doc_ulid:
+            raise ValueError(f"No ULID found in {args.input}. Run chunker.py first.")
 
-    print(f"Document ULID: {doc_ulid}", file=sys.stderr)
+        print(f"Document ULID: {doc_ulid}", file=sys.stderr)
 
-    # Output-Pfade finden
-    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+        # Output-Pfade finden
+        output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-    # Nodes und Edges laden
-    if not output_paths['nodes'].exists():
-        print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
-        print("Run chunker.py first.", file=sys.stderr)
-        sys.exit(1)
+        # Nodes und Edges laden
+        if not output_paths['nodes'].exists():
+            raise FileNotFoundError(f"Nodes file not found: {output_paths['nodes']}")
 
-    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+        nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
 
-    edges = None
-    if output_paths['edges'].exists():
-        edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
-        print(f"Loaded {len(edges)} edges", file=sys.stderr)
+        edges = None
+        if output_paths['edges'].exists():
+            edges = json.loads(output_paths['edges'].read_text(encoding="utf-8"))
+            print(f"Loaded {len(edges)} edges", file=sys.stderr)
 
-    # Texte extrahieren
-    print(f"Extracting text ranges from {args.input}", file=sys.stderr)
-    texts, chunk_ids = extract_text_ranges(args.input, nodes, edges)
-    print(f"Extracted {len(texts)} texts", file=sys.stderr)
+        # Texte extrahieren
+        print(f"Extracting text ranges from {args.input}", file=sys.stderr)
+        texts, chunk_ids = extract_text_ranges(args.input, nodes, edges)
+        print(f"Extracted {len(texts)} texts", file=sys.stderr)
 
-    if not texts:
-        print("No texts extracted", file=sys.stderr)
-        sys.exit(1)
+        if not texts:
+            raise ValueError("No texts extracted")
 
-    # Debug: Text-Größen
-    sizes = [len(t) for t in texts]
-    print(f"Text sizes: min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)//len(sizes)}", file=sys.stderr)
+        # Debug: Text-Größen
+        sizes = [len(t) for t in texts]
+        print(
+            f"Text sizes: min={min(sizes)}, max={max(sizes)}, avg={sum(sizes)//len(sizes)}",
+            file=sys.stderr,
+        )
 
-    # Filter zu große Texte
-    texts, chunk_ids, skipped_indices = filter_oversized_texts(texts, chunk_ids)
-    if skipped_indices:
-        print(f"Skipped {len(skipped_indices)} oversized texts", file=sys.stderr)
+        # Filter zu große Texte
+        texts, chunk_ids, skipped_indices = filter_oversized_texts(texts, chunk_ids)
+        if skipped_indices:
+            print(f"Skipped {len(skipped_indices)} oversized texts", file=sys.stderr)
 
-    if not texts:
-        print("No texts remaining after filtering", file=sys.stderr)
-        sys.exit(1)
+        if not texts:
+            raise ValueError("No texts remaining after filtering")
 
-    # Embeddings erzeugen
-    embeddings = embed_texts(texts, config)
+        # Embeddings erzeugen
+        embeddings = embed_texts(texts, config)
 
-    # Dimension validieren
-    actual_dim = len(embeddings[0])
-    if actual_dim != config["embedding_dim"]:
-        print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}",
-              file=sys.stderr)
+        # Dimension validieren
+        actual_dim = len(embeddings[0])
+        if actual_dim != config["embedding_dim"]:
+            print(f"Warning: expected dim {config['embedding_dim']}, got {actual_dim}", file=sys.stderr)
 
-    # Parquet schreiben
-    save_parquet(embeddings, chunk_ids, output_paths['embeddings'], config, args.input.name)
-    print(f"Written {output_paths['embeddings']} ({len(embeddings)} embeddings)", file=sys.stderr)
+        # Parquet schreiben
+        save_parquet(embeddings, chunk_ids, output_paths['embeddings'], config, args.input.name)
+        print(f"Written {output_paths['embeddings']} ({len(embeddings)} embeddings)", file=sys.stderr)
 
-    # meta.json updaten
-    if output_paths['meta'].exists():
-        meta = json.loads(output_paths['meta'].read_text(encoding="utf-8"))
-    else:
-        meta = {
-            "source_file": args.input.name,
-            "ulid": doc_ulid,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "uses": 1,
-            "importance": None,
-            "decay": None,
-            "categories": [],
-            "processing_steps": []
-        }
+        # Update meta
+        update_meta(
+            output_paths['meta'],
+            {
+                "step": "embedding",
+                "embedding_count": len(embeddings),
+                "model": config["embedding_model"],
+                "dim": actual_dim,
+            },
+        )
+        print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
-    # Update meta
-    update_meta(output_paths['meta'], {
-        "step": "embedding",
-        "embedding_count": len(embeddings),
-        "model": config["embedding_model"],
-        "dim": actual_dim
-    })
-    print(f"Updated {output_paths['meta']}", file=sys.stderr)
+        result = ok_result(
+            "embedder",
+            input=str(args.input),
+            doc_ulid=doc_ulid,
+            output={
+                "embeddings": str(output_paths["embeddings"]),
+                "meta": str(output_paths["meta"]),
+            },
+            counts={
+                "texts_extracted": len(texts) + len(skipped_indices),
+                "texts_embedded": len(embeddings),
+                "chunks_embedded": len(chunk_ids),
+                "skipped_texts": len(skipped_indices),
+            },
+            embedding={"model": config.get("embedding_model"), "dim": actual_dim},
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(error_result("embedder", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -295,7 +295,11 @@ def main():
         data_dir = Path(".brain_graph/data")
         print(f"Building in-memory database from {data_dir}...")
         db = BrainGraphDB(":memory:")
-        db.import_directory(data_dir)
+        try:
+            db.import_directory_fast(data_dir)
+        except Exception as e:
+            print(f"Fast import failed ({e}), falling back to legacy import...", file=sys.stderr)
+            db.import_directory(data_dir)
         db.build_indexes()
         con = db.con
 

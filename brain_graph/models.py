@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 class Section(BaseModel):
     """Document structure section (heading hierarchy)."""
 
-    id: str = Field(pattern=r"^sec_[a-f0-9]{8,12}$")
+    id: str = Field(pattern=r"^(sec_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     title: str = Field(min_length=1)
     level: int = Field(ge=1, le=6, description="Heading level 1-6")
@@ -31,7 +31,7 @@ class Section(BaseModel):
 class Chunk(BaseModel):
     """Text chunk with content-addressable ID."""
 
-    id: str = Field(pattern=r"^chunk_[a-f0-9]{8,12}$")
+    id: str = Field(pattern=r"^(chunk_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     doc_id: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     chunk_id: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}:[a-f0-9]{12}$")
@@ -61,7 +61,7 @@ class EntityType(str, Enum):
 class Entity(BaseModel):
     """Named entity extracted from text (NER)."""
 
-    id: str = Field(pattern=r"^ent_[a-z0-9_-]+$")
+    id: str = Field(pattern=r"^(ent_[a-z0-9_-]+|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     entity_type: EntityType
     title: str = Field(min_length=1)
@@ -278,3 +278,23 @@ class Document(BaseModel):
         """Get the most recent info for a processing step."""
         matching = [s for s in self.processing.steps if s.step == step]
         return matching[-1] if matching else None
+
+
+# ============================================================================
+# Taxonomy
+# ============================================================================
+
+
+class TaxonomyCategory(BaseModel):
+    """Taxonomy category node for classification."""
+
+    id: str = Field(description="Category slug (kebab-case)")
+    ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
+    type: Literal["category"] = "category"
+    title: str = Field(min_length=1)
+    description: Optional[str] = None
+    keywords: list[str] = Field(default_factory=list)
+    embedding: Optional[list[float]] = None
+
+    class Config:
+        extra = "forbid"

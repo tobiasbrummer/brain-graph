@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import sys
+import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,8 +25,10 @@ from file_utils import (
     extract_ulid_from_md,
     generate_ulid,
     get_output_paths,
+    strip_ulid_lines,
     update_meta
 )
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def detect_language(nodes: list[dict[str, Any]]) -> str:
@@ -56,15 +59,16 @@ def load_spacy_model(lang: str = "de") -> spacy.Language:
 
     try:
         return spacy.load(model_name)
-    except OSError:
-        print(f"Error: spaCy model '{model_name}' not found.", file=sys.stderr)
-        print(f"Install with: python -m spacy download {model_name}", file=sys.stderr)
-        sys.exit(1)
+    except OSError as e:
+        raise RuntimeError(
+            f"spaCy model '{model_name}' not found. Install with: python -m spacy download {model_name}"
+        ) from e
 
 
 def normalize_markdown(text: str) -> str:
     """Entfernt Markdown-Syntax vor NER."""
     import re
+    text = strip_ulid_lines(text)
     # Links entfernen: [text](url) -> text
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
     # Bold/Italic entfernen
@@ -307,6 +311,7 @@ def print_statistics(
 
 
 def main():
+    start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Extract named entities from chunks")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
     parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
@@ -315,90 +320,118 @@ def main():
                         help="Language for spaCy model (auto-detected if not specified)")
     parser.add_argument("--min-occurrences", type=int, default=4,
                         help="Minimum occurrences for entity to be included")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = parser.parse_args()
 
-    if not args.input.exists():
-        print(f"Error: Source file not found: {args.input}", file=sys.stderr)
-        sys.exit(1)
+    try:
+        if not args.input.exists():
+            raise FileNotFoundError(f"Source file not found: {args.input}")
 
-    # ULID extrahieren
-    doc_ulid = extract_ulid_from_md(args.input)
-    if not doc_ulid:
-        print(f"Error: No ULID found in {args.input}", file=sys.stderr)
-        sys.exit(1)
+        # ULID extrahieren
+        doc_ulid = extract_ulid_from_md(args.input)
+        if not doc_ulid:
+            raise ValueError(f"No ULID found in {args.input}")
 
-    # Pfade ermitteln
-    output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
+        # Pfade ermitteln
+        output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-    if not output_paths['nodes'].exists():
-        print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
-        print("Run chunker.py first.", file=sys.stderr)
-        sys.exit(1)
+        if not output_paths['nodes'].exists():
+            raise FileNotFoundError(f"Nodes file not found: {output_paths['nodes']} (run chunker.py first)")
 
-    # Lade Daten
-    print("Loading nodes and source...", file=sys.stderr)
-    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
-    source_text = args.input.read_text(encoding="utf-8")
+        # Lade Daten
+        print("Loading nodes and source...", file=sys.stderr)
+        nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+        source_text = args.input.read_text(encoding="utf-8")
 
-    # Auto-detect Sprache falls nicht angegeben
-    lang = args.lang
-    if lang is None:
-        lang = detect_language(nodes)
-        print(f"Auto-detected language: {lang}", file=sys.stderr)
+        # Auto-detect Sprache falls nicht angegeben
+        lang = args.lang
+        if lang is None:
+            lang = detect_language(nodes)
+            print(f"Auto-detected language: {lang}", file=sys.stderr)
 
-    # Lade spaCy-Modell
-    print(f"Loading spaCy model for '{lang}'...", file=sys.stderr)
-    nlp = load_spacy_model(lang)
+        # Lade spaCy-Modell
+        print(f"Loading spaCy model for '{lang}'...", file=sys.stderr)
+        nlp = load_spacy_model(lang)
 
-    chunk_count = sum(1 for n in nodes if n.get("type") == "chunk")
-    print(f"Loaded {len(nodes)} nodes ({chunk_count} chunks)", file=sys.stderr)
+        chunk_count = sum(1 for n in nodes if n.get("type") == "chunk")
+        print(f"Loaded {len(nodes)} nodes ({chunk_count} chunks)", file=sys.stderr)
 
-    # Extrahiere Entities
-    print("Extracting entities...", file=sys.stderr)
-    entities, chunk_to_entities = process_chunks(
-        nodes,
-        source_text,
-        nlp,
-        args.min_occurrences
-    )
+        # Extrahiere Entities
+        print("Extracting entities...", file=sys.stderr)
+        entities, chunk_to_entities = process_chunks(
+            nodes,
+            source_text,
+            nlp,
+            args.min_occurrences
+        )
 
-    # Statistiken
-    print_statistics(entities, chunk_to_entities)
+        # Statistiken
+        print_statistics(entities, chunk_to_entities)
 
-    # Erstelle Nodes und Edges
-    entity_nodes = create_entity_nodes(entities)
-    entity_edges = create_entity_edges(chunk_to_entities)
+        # Erstelle Nodes und Edges
+        entity_nodes = create_entity_nodes(entities)
+        entity_edges = create_entity_edges(chunk_to_entities)
 
-    print(f"\nCreated {len(entity_nodes)} entity nodes", file=sys.stderr)
-    print(f"Created {len(entity_edges)} entity edges", file=sys.stderr)
+        print(f"\nCreated {len(entity_nodes)} entity nodes", file=sys.stderr)
+        print(f"Created {len(entity_edges)} entity edges", file=sys.stderr)
 
-    # NER-Verzeichnisse erstellen
-    output_paths['ner_nodes'].parent.mkdir(parents=True, exist_ok=True)
-    output_paths['ner_edges'].parent.mkdir(parents=True, exist_ok=True)
+        # NER-Verzeichnisse erstellen
+        output_paths['ner_nodes'].parent.mkdir(parents=True, exist_ok=True)
+        output_paths['ner_edges'].parent.mkdir(parents=True, exist_ok=True)
 
-    # NER-Files schreiben
-    output_paths['ner_nodes'].write_text(
-        json.dumps(entity_nodes, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-    output_paths['ner_edges'].write_text(
-        json.dumps(entity_edges, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
+        # NER-Files schreiben
+        output_paths['ner_nodes'].write_text(
+            json.dumps(entity_nodes, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        output_paths['ner_edges'].write_text(
+            json.dumps(entity_edges, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
 
-    print(f"\nWritten {output_paths['ner_nodes']}", file=sys.stderr)
-    print(f"Written {output_paths['ner_edges']}", file=sys.stderr)
+        print(f"\nWritten {output_paths['ner_nodes']}", file=sys.stderr)
+        print(f"Written {output_paths['ner_edges']}", file=sys.stderr)
 
-    # Update meta.json
-    update_meta(output_paths['meta'], {
-        "step": "ner_extraction",
-        "entity_count": len(entity_nodes),
-        "edge_count": len(entity_edges),
-        "language": lang,
-        "min_occurrences": args.min_occurrences,
-    })
-    print(f"Updated {output_paths['meta']}", file=sys.stderr)
+        # Update meta.json
+        update_meta(output_paths['meta'], {
+            "step": "ner_extraction",
+            "entity_count": len(entity_nodes),
+            "edge_count": len(entity_edges),
+            "language": lang,
+            "min_occurrences": args.min_occurrences,
+        })
+        print(f"Updated {output_paths['meta']}", file=sys.stderr)
+
+        result = ok_result(
+            "ner_extractor",
+            input=str(args.input),
+            doc_ulid=doc_ulid,
+            output={
+                "ner_nodes": str(output_paths["ner_nodes"]),
+                "ner_edges": str(output_paths["ner_edges"]),
+                "meta": str(output_paths["meta"]),
+            },
+            counts={"entities": len(entity_nodes), "edges": len(entity_edges), "chunks": chunk_count},
+            language=lang,
+            min_occurrences=args.min_occurrences,
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(error_result("ner_extractor", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

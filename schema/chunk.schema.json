@@ -7,8 +7,8 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^chunk_[a-f0-9]{8,12}$",
-      "description": "Short chunk ID (chunk_<hash>)"
+      "pattern": "^(chunk_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$",
+      "description": "Chunk ID (short: chunk_<hash> or ULID)"
     },
     "ulid": {
       "type": "string",

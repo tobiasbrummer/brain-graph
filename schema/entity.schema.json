@@ -7,8 +7,8 @@
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^ent_[a-z0-9_-]+$",
-      "description": "Entity ID (ent_<normalized_name>)"
+      "pattern": "^(ent_[a-z0-9_-]+|[0-9A-HJKMNP-TV-Z]{26})$",
+      "description": "Entity ID (short: ent_<normalized_name> or ULID)"
     },
     "ulid": {
       "type": "string",

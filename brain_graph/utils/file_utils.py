@@ -18,6 +18,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+_INJECTED_ULID_LINE_RE = re.compile(r"^\+id:[0-9A-HJKMNP-TV-Z]{26}\s*$", re.MULTILINE)
+
+
+def strip_ulid_lines(text: str) -> str:
+    """Remove injected '+id:<ULID>' lines from markdown snippets."""
+    return _INJECTED_ULID_LINE_RE.sub("", text)
+
+
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
     """
     Load configuration from config.json.

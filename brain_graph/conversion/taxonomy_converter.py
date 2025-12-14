@@ -8,6 +8,8 @@ ID entspricht dem +name-Slug. ULIDs nur in Nodes (Normalisierung).
 """
 
 import argparse
+import sys
+import time
 import hashlib
 import json
 import pathlib
@@ -16,6 +18,8 @@ import datetime
 from typing import List, Dict, Any, Optional
 
 import ulid
+
+from cli_utils import emit_json, error_result, ms_since, ok_result
 
 HEADER_RE = re.compile(r"^(#+)\s+(.*)$")
 FIELD_RE = re.compile(r"^\+([^:]+):(.*)$")
@@ -200,36 +204,68 @@ def build_graph(raw_nodes: List[Dict[str, Any]]) -> tuple[List[Dict], List[Dict]
                         "weight": weight
                     })
                 else:
-                    print(f"Warning: Unresolved reference '{ref}' in {node_id}")
+                    print(f"Warning: Unresolved reference '{ref}' in {node_id}", file=sys.stderr)
     
     return nodes_list, edges_list
 
 
 def main():
+    start = time.perf_counter()
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default="config/taxonomy.md")
-    ap.add_argument("--output-nodes", default=".brain_graph/config/taxonomy.md.nodes.json")
-    ap.add_argument("--output-edges", default=".brain_graph/config/taxonomy.md.edges.json")
+    ap.add_argument("--input", type=pathlib.Path, default=pathlib.Path("config/taxonomy.md"))
+    ap.add_argument("--output-nodes", type=pathlib.Path, default=pathlib.Path(".brain_graph/config/taxonomy.md.nodes.json"))
+    ap.add_argument("--output-edges", type=pathlib.Path, default=pathlib.Path(".brain_graph/config/taxonomy.md.edges.json"))
+    ap.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (default: json)",
+    )
+    ap.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    ap.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
     args = ap.parse_args()
 
-    text = pathlib.Path(args.input).read_text(encoding="utf-8")
-    raw_nodes = parse_file(text)
-    nodes, edges = build_graph(raw_nodes)
+    try:
+        text = args.input.read_text(encoding="utf-8")
+        raw_nodes = parse_file(text)
+        nodes, edges = build_graph(raw_nodes)
 
-    # Sortiere für deterministische Ausgabe
-    nodes.sort(key=lambda n: n["id"])
-    edges.sort(key=lambda e: (e["from"], e["to"], e["type"]))
+        # Sortiere für deterministische Ausgabe
+        nodes.sort(key=lambda n: n["id"])
+        edges.sort(key=lambda e: (e["from"], e["to"], e["type"]))
 
-    pathlib.Path(args.output_nodes).write_text(
-        json.dumps(nodes, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    pathlib.Path(args.output_edges).write_text(
-        json.dumps(edges, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    
-    print(f"Written {args.output_nodes} ({len(nodes)} nodes)")
-    print(f"Written {args.output_edges} ({len(edges)} edges)")
+        args.output_nodes.parent.mkdir(parents=True, exist_ok=True)
+        args.output_edges.parent.mkdir(parents=True, exist_ok=True)
+
+        args.output_nodes.write_text(
+            json.dumps(nodes, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        args.output_edges.write_text(
+            json.dumps(edges, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+        result = ok_result(
+            "taxonomy_converter",
+            input=str(args.input),
+            output={"nodes": str(args.output_nodes), "edges": str(args.output_edges)},
+            counts={"nodes": len(nodes), "edges": len(edges)},
+            duration_ms=ms_since(start),
+        )
+        if args.format == "json":
+            emit_json(result, pretty=args.pretty)
+        else:
+            print(f"Written {args.output_nodes} ({len(nodes)} nodes)")
+            print(f"Written {args.output_edges} ({len(edges)} edges)")
+        return 0
+    except Exception as e:
+        if args.format == "json":
+            emit_json(
+                error_result("taxonomy_converter", e, include_traceback=args.debug, duration_ms=ms_since(start)),
+                pretty=args.pretty,
+            )
+            return 1
+        raise
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
