@@ -43,7 +43,7 @@ services:
     ports:
       - 8200:8080
     command: >
-      -m /models/jina-embeddings-v3-Q4_K_M.gguf
+      -m /models/jina-embeddings-v3-Q8_0.gguf
       --embedding          
       -c 8192              
       -ngl 99              
@@ -68,8 +68,8 @@ services:
     ports:
       - 8300:8080
     command: >
-      -m /models/jina-reranker-v3-Q4_K_M.gguf
-      --reranking          
+      -m /models/jina-reranker-v2-base-multilingual-q8_0.gguf
+      --rerank
       -c 8192
       -np 8
       -ngl 99

@@ -17,12 +17,7 @@ from typing import Any
 
 from openai import OpenAI
 
-from file_utils import (, load_config
-    extract_ulid_from_md,
-    get_output_paths,
-    update_meta
-,
-    load_config)
+from file_utils import extract_ulid_from_md, get_output_paths, update_meta, load_config
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
@@ -63,9 +58,9 @@ def generate_summary(text: str, client: OpenAI, model: str) -> str:
 {text}
 
 Summary:"""
-    
+
     print(f"Generating summary... {prompt}", file=sys.stderr)
-    
+
     try:
         response = client.chat.completions.create(
             model=model,
@@ -126,10 +121,22 @@ def summarize_chunks(
 
 def main():
     parser = argparse.ArgumentParser(description="Generate summaries for chunks")
-    parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
-    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
-                        help="Base data directory")
-    parser.add_argument("-c", "--config", type=Path, help="config.json path", default=Path(".brain_graph/config/config.json"))
+    parser.add_argument(
+        "-i", "--input", type=Path, required=True, help="Source Markdown file"
+    )
+    parser.add_argument(
+        "--base-dir",
+        type=Path,
+        default=Path(".brain_graph/data"),
+        help="Base data directory",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=Path,
+        help="config.json path",
+        default=Path(".brain_graph/config/config.json"),
+    )
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -145,7 +152,7 @@ def main():
     # Pfade ermitteln
     output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-    if not output_paths['nodes'].exists():
+    if not output_paths["nodes"].exists():
         print(f"Error: Nodes file not found: {output_paths['nodes']}", file=sys.stderr)
         print("Run chunker.py first.", file=sys.stderr)
         sys.exit(1)
@@ -154,7 +161,7 @@ def main():
     config = load_config(args.config)
 
     # Lade Daten
-    nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+    nodes = json.loads(output_paths["nodes"].read_text(encoding="utf-8"))
     source_text = args.input.read_text(encoding="utf-8")
 
     chunk_count = sum(1 for n in nodes if n.get("type") == "chunk")
@@ -164,19 +171,23 @@ def main():
     updated_nodes = summarize_chunks(nodes, source_text, config)
 
     # Schreibe nodes.json zurück (in-place update)
-    output_paths['nodes'].write_text(
-        json.dumps(updated_nodes, ensure_ascii=False, indent=2),
-        encoding="utf-8"
+    output_paths["nodes"].write_text(
+        json.dumps(updated_nodes, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"Updated {output_paths['nodes']}", file=sys.stderr)
 
     # Update meta.json
-    summary_count = sum(1 for n in updated_nodes if n.get("type") == "chunk" and n.get("summary"))
-    update_meta(output_paths['meta'], {
-        "step": "summarization",
-        "summary_count": summary_count,
-        "model": config["summary_model"]
-    })
+    summary_count = sum(
+        1 for n in updated_nodes if n.get("type") == "chunk" and n.get("summary")
+    )
+    update_meta(
+        output_paths["meta"],
+        {
+            "step": "summarization",
+            "summary_count": summary_count,
+            "model": config["summary_model"],
+        },
+    )
     print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
 

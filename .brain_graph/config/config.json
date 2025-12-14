@@ -1,6 +1,6 @@
 {
   "embedding_base_url": "http://localhost:8200/v1",
-  "embedding_model": "jina-embeddings-v3-Q4_K_M",
+  "embedding_model": "jina-embeddings-v3-Q8_0",
   "embedding_dim": 1024,
   "embedding_api_key": "unused",
   "embedding_batch_size": 16,
@@ -12,6 +12,6 @@
   "summary_model": "Qwen3-VL-4B-Thinking-Q4_K_M",
   "summary_api_key": "unused",
   "reranker_base_url": "http://localhost:8300/v1",
-  "reranker_model": "jina-reranker-v3-Q4_K_M",
+  "reranker_model": "jina-reranker-v2-base-multilingual-q8_0",
   "reranker_api_key": "unused"
 }

@@ -35,9 +35,7 @@ def embed_query(query: str, config: dict) -> list[float]:
 
 
 def semantic_search(
-    con: duckdb.DuckDBPyConnection,
-    query_embedding: list[float],
-    limit: int = 10
+    con: duckdb.DuckDBPyConnection, query_embedding: list[float], limit: int = 10
 ) -> list[dict]:
     """
     Semantic search using 256d embeddings.
@@ -53,7 +51,8 @@ def semantic_search(
     # Truncate to 256d
     query_emb_256d = query_embedding[:256]
 
-    results = con.execute("""
+    results = con.execute(
+        """
         SELECT
             n.id,
             n.text,
@@ -65,24 +64,24 @@ def semantic_search(
         WHERE n.type = 'chunk'
         ORDER BY similarity DESC
         LIMIT ?
-    """, [query_emb_256d, limit]).fetchall()
+    """,
+        [query_emb_256d, limit],
+    ).fetchall()
 
     return [
         {
-            'chunk_id': chunk_id,
-            'text': text,
-            'summary': summary,
-            'source_file': source_file,
-            'similarity': similarity
+            "chunk_id": chunk_id,
+            "text": text,
+            "summary": summary,
+            "source_file": source_file,
+            "similarity": similarity,
         }
         for chunk_id, text, summary, source_file, similarity in results
     ]
 
 
 def bm25_search(
-    con: duckdb.DuckDBPyConnection,
-    query: str,
-    limit: int = 10
+    con: duckdb.DuckDBPyConnection, query: str, limit: int = 10
 ) -> list[dict]:
     """
     BM25 full-text search.
@@ -95,7 +94,8 @@ def bm25_search(
     Returns:
         List of results with chunk_id, text, summary, score
     """
-    results = con.execute("""
+    results = con.execute(
+        """
         SELECT
             id,
             text,
@@ -106,15 +106,17 @@ def bm25_search(
         WHERE fts_main_nodes.match_bm25(id, ?) IS NOT NULL
         ORDER BY score DESC
         LIMIT ?
-    """, [query, query, limit]).fetchall()
+    """,
+        [query, query, limit],
+    ).fetchall()
 
     return [
         {
-            'chunk_id': chunk_id,
-            'text': text,
-            'summary': summary,
-            'source_file': source_file,
-            'bm25_score': score
+            "chunk_id": chunk_id,
+            "text": text,
+            "summary": summary,
+            "source_file": source_file,
+            "bm25_score": score,
         }
         for chunk_id, text, summary, source_file, score in results
     ]
@@ -126,7 +128,7 @@ def hybrid_search(
     query_embedding: list[float],
     limit: int = 10,
     semantic_weight: float = 0.7,
-    bm25_weight: float = 0.3
+    bm25_weight: float = 0.3,
 ) -> list[dict]:
     """
     Hybrid search combining semantic and BM25.
@@ -145,7 +147,8 @@ def hybrid_search(
     # Truncate to 256d
     query_emb_256d = query_embedding[:256]
 
-    results = con.execute("""
+    results = con.execute(
+        """
         WITH semantic_results AS (
             SELECT
                 n.id,
@@ -176,7 +179,9 @@ def hybrid_search(
             COALESCE(b.bm25_score, 0) as bm25_score
         FROM semantic_results s
         FULL OUTER JOIN bm25_results b ON s.id = b.id
-    """, [query_emb_256d, query, query]).fetchall()
+    """,
+        [query_emb_256d, query, query],
+    ).fetchall()
 
     if not results:
         return []
@@ -191,26 +196,25 @@ def hybrid_search(
         bm25_norm = bm25 / max_bm25
         hybrid = sem_norm * semantic_weight + bm25_norm * bm25_weight
 
-        combined.append({
-            'chunk_id': chunk_id,
-            'text': text,
-            'summary': summary,
-            'source_file': source_file,
-            'hybrid_score': hybrid,
-            'semantic_score': sem_norm,
-            'bm25_score': bm25_norm
-        })
+        combined.append(
+            {
+                "chunk_id": chunk_id,
+                "text": text,
+                "summary": summary,
+                "source_file": source_file,
+                "hybrid_score": hybrid,
+                "semantic_score": sem_norm,
+                "bm25_score": bm25_norm,
+            }
+        )
 
     # Sort by hybrid score
-    combined.sort(key=lambda x: x['hybrid_score'], reverse=True)
+    combined.sort(key=lambda x: x["hybrid_score"], reverse=True)
     return combined[:limit]
 
 
 def fuzzy_search(
-    con: duckdb.DuckDBPyConnection,
-    query: str,
-    limit: int = 50,
-    max_distance: int = 2
+    con: duckdb.DuckDBPyConnection, query: str, limit: int = 50, max_distance: int = 2
 ) -> list[dict]:
     """
     Fuzzy search using Levenshtein distance (edit distance).
@@ -235,7 +239,8 @@ def fuzzy_search(
 
     # Build fuzzy search query
     # For each query term, find chunks with similar words
-    results = con.execute("""
+    results = con.execute(
+        """
         WITH query_terms AS (
             SELECT UNNEST(?::VARCHAR[]) as term
         ),
@@ -247,14 +252,14 @@ def fuzzy_search(
                 n.source_file,
                 qt.term as query_term,
                 word.word as matched_word,
-                editdist(qt.term, word.word) as distance
+                editdist3(qt.term, word.word) as distance
             FROM nodes n,
                  LATERAL (
                      SELECT UNNEST(string_split(lower(n.text), ' ')) as word
                  ) word,
                  query_terms qt
             WHERE n.type = 'chunk'
-              AND editdist(qt.term, word.word) <= ?
+              AND editdist3(qt.term, word.word) <= ?
               AND length(word.word) >= 3
         ),
         scored_chunks AS (
@@ -282,18 +287,20 @@ def fuzzy_search(
         FROM scored_chunks
         ORDER BY fuzzy_score DESC, matched_terms DESC
         LIMIT ?
-    """, [query_terms, max_distance, limit]).fetchall()
+    """,
+        [query_terms, max_distance, limit],
+    ).fetchall()
 
     return [
         {
-            'chunk_id': cid,
-            'text': text,
-            'summary': summary,
-            'source_file': source_file,
-            'matched_terms': matched_terms,
-            'avg_distance': avg_distance,
-            'total_matches': total_matches,
-            'fuzzy_score': fuzzy_score
+            "chunk_id": cid,
+            "text": text,
+            "summary": summary,
+            "source_file": source_file,
+            "matched_terms": matched_terms,
+            "avg_distance": avg_distance,
+            "total_matches": total_matches,
+            "fuzzy_score": fuzzy_score,
         }
         for cid, text, summary, source_file, matched_terms, avg_distance, total_matches, fuzzy_score in results
     ]
@@ -303,7 +310,7 @@ def exact_string_search(
     con: duckdb.DuckDBPyConnection,
     query: str,
     limit: int = 50,
-    case_sensitive: bool = False
+    case_sensitive: bool = False,
 ) -> list[dict]:
     """
     Exact string search without tokenization.
@@ -322,7 +329,8 @@ def exact_string_search(
     """
     if case_sensitive:
         # Case-sensitive search
-        results = con.execute("""
+        results = con.execute(
+            """
             SELECT
                 id,
                 text,
@@ -335,11 +343,14 @@ def exact_string_search(
               AND text LIKE '%' || ? || '%'
             ORDER BY match_count DESC, position_score DESC
             LIMIT ?
-        """, [query, query, query, query, limit]).fetchall()
+        """,
+            [query, query, query, query, limit],
+        ).fetchall()
     else:
         # Case-insensitive search
         query_lower = query.lower()
-        results = con.execute("""
+        results = con.execute(
+            """
             SELECT
                 id,
                 text,
@@ -352,16 +363,18 @@ def exact_string_search(
               AND lower(text) LIKE '%' || ? || '%'
             ORDER BY match_count DESC, position_score DESC
             LIMIT ?
-        """, [query_lower, query_lower, query_lower, query_lower, limit]).fetchall()
+        """,
+            [query_lower, query_lower, query_lower, query_lower, limit],
+        ).fetchall()
 
     return [
         {
-            'chunk_id': cid,
-            'text': text,
-            'summary': summary,
-            'source_file': source_file,
-            'match_count': int(match_count),
-            'position_score': position_score
+            "chunk_id": cid,
+            "text": text,
+            "summary": summary,
+            "source_file": source_file,
+            "match_count": int(match_count),
+            "position_score": position_score,
         }
         for cid, text, summary, source_file, match_count, position_score in results
     ]
@@ -384,7 +397,7 @@ def deduplicate_by_document(results: list[dict], score_key: str) -> list[dict]:
     # Group by source_file, keep best chunk per document
     best_per_doc = {}
     for result in results:
-        source = result.get('source_file', 'unknown')
+        source = result.get("source_file", "unknown")
         score = result.get(score_key, 0)
 
         if source not in best_per_doc or score > best_per_doc[source].get(score_key, 0):
@@ -411,23 +424,25 @@ def print_results(results: list[dict], mode: str):
         print(f"   Source: {result.get('source_file', 'unknown')}")
 
         # Print scores
-        if mode == 'semantic':
+        if mode == "semantic":
             print(f"   Similarity: {result['similarity']:.3f}")
-        elif mode == 'bm25':
+        elif mode == "bm25":
             print(f"   BM25 Score: {result['bm25_score']:.3f}")
-        elif mode == 'hybrid':
-            print(f"   Hybrid: {result['hybrid_score']:.3f} "
-                  f"(sem: {result['semantic_score']:.3f}, bm25: {result['bm25_score']:.3f})")
+        elif mode == "hybrid":
+            print(
+                f"   Hybrid: {result['hybrid_score']:.3f} "
+                f"(sem: {result['semantic_score']:.3f}, bm25: {result['bm25_score']:.3f})"
+            )
 
         # Print summary if available
-        if result.get('summary'):
-            summary = result['summary']
+        if result.get("summary"):
+            summary = result["summary"]
             if len(summary) > 200:
                 summary = summary[:200] + "..."
             print(f"\n   Summary: {summary}")
 
         # Print text preview
-        text = result.get('text', '')
+        text = result.get("text", "")
         if text:
             text_preview = text[:300] + "..." if len(text) > 300 else text
             print(f"\n   {text_preview}")
@@ -438,16 +453,32 @@ def print_results(results: list[dict], mode: str):
 def main():
     parser = argparse.ArgumentParser(description="Search brain-graph database")
     parser.add_argument("query", help="Search query")
-    parser.add_argument("--db", default=".brain_graph/brain.duckdb",
-                       help="DuckDB database path (default: .brain_graph/brain.duckdb)")
-    parser.add_argument("--mode", choices=['semantic', 'bm25', 'hybrid'],
-                       default='hybrid', help="Search mode (default: hybrid)")
-    parser.add_argument("--limit", type=int, default=10,
-                       help="Number of results (default: 10)")
-    parser.add_argument("--semantic-weight", type=float, default=0.7,
-                       help="Weight for semantic in hybrid mode (default: 0.7)")
-    parser.add_argument("--config", type=Path, default=None,
-                       help="Config file path (default: auto-detect)")
+    parser.add_argument(
+        "--db",
+        default=".brain_graph/brain.duckdb",
+        help="DuckDB database path (default: .brain_graph/brain.duckdb)",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["semantic", "bm25", "hybrid"],
+        default="hybrid",
+        help="Search mode (default: hybrid)",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=10, help="Number of results (default: 10)"
+    )
+    parser.add_argument(
+        "--semantic-weight",
+        type=float,
+        default=0.7,
+        help="Weight for semantic in hybrid mode (default: 0.7)",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Config file path (default: auto-detect)",
+    )
     args = parser.parse_args()
 
     # Check if DB exists, otherwise build from data directory
@@ -490,17 +521,25 @@ def main():
 
         # Copy main tables (exclude internal FTS tables)
         main_tables = [
-            'nodes', 'edges',
-            'chunk_embeddings_256d', 'taxonomy_embeddings_256d',
-            'embedding_sources', 'meta', 'german_stopwords'
+            "nodes",
+            "edges",
+            "chunk_embeddings_256d",
+            "taxonomy_embeddings_256d",
+            "embedding_sources",
+            "meta",
+            "german_stopwords",
         ]
 
         for table_name in main_tables:
             # Check if table exists before copying
-            exists = con.execute(f"SELECT COUNT(*) FROM duckdb_tables() WHERE database_name='disk_db' AND table_name='{table_name}'").fetchone()[0]
+            exists = con.execute(
+                f"SELECT COUNT(*) FROM duckdb_tables() WHERE database_name='disk_db' AND table_name='{table_name}'"
+            ).fetchone()[0]
             if exists:
                 print(f"  Loading table: {table_name}", file=sys.stderr)
-                con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}")
+                con.execute(
+                    f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}"
+                )
 
         # Detach disk database (now everything is in memory)
         con.execute("DETACH disk_db")
@@ -512,25 +551,31 @@ def main():
         con.execute("INSTALL vss; LOAD vss;")
 
         # HNSW index for vector search
-        con.execute("""
+        con.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
             ON chunk_embeddings_256d
             USING HNSW (embedding)
             WITH (metric = 'cosine')
-        """)
+        """
+        )
 
         # FTS extension
         con.execute("INSTALL fts; LOAD fts;")
 
         # Full-text search index with German stemmer and stopwords
         # Check if german_stopwords table exists (copied from disk DB)
-        has_stopwords = con.execute(
-            "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
-        ).fetchone()[0] > 0
+        has_stopwords = (
+            con.execute(
+                "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
+            ).fetchone()[0]
+            > 0
+        )
 
-        stopwords_param = 'german_stopwords' if has_stopwords else 'none'
+        stopwords_param = "german_stopwords" if has_stopwords else "none"
 
-        con.execute(f"""
+        con.execute(
+            f"""
             PRAGMA create_fts_index(
                 'nodes', 'id', 'text', 'summary', 'title', 'description',
                 stemmer='german',
@@ -540,32 +585,37 @@ def main():
                 lower=1,
                 overwrite=1
             )
-        """)
+        """
+        )
 
         print(f"✓ Database ready (indexes built)", file=sys.stderr)
     # else: con is already set from the BrainGraphDB build above
 
     # Perform search
     query_embedding = None
-    if args.mode in ['semantic', 'hybrid']:
+    if args.mode in ["semantic", "hybrid"]:
         print(f"Embedding query...", file=sys.stderr)
         query_embedding = embed_query(args.query, config)
 
     print(f"Searching with {args.mode} mode...", file=sys.stderr)
 
-    if args.mode == 'semantic':
+    if args.mode == "semantic":
         results = semantic_search(con, query_embedding, args.limit)
-        score_key = 'similarity'
-    elif args.mode == 'bm25':
+        score_key = "similarity"
+    elif args.mode == "bm25":
         results = bm25_search(con, args.query, args.limit)
-        score_key = 'bm25_score'
-    elif args.mode == 'hybrid':
+        score_key = "bm25_score"
+    elif args.mode == "hybrid":
         bm25_weight = 1.0 - args.semantic_weight
         results = hybrid_search(
-            con, args.query, query_embedding,
-            args.limit, args.semantic_weight, bm25_weight
+            con,
+            args.query,
+            query_embedding,
+            args.limit,
+            args.semantic_weight,
+            bm25_weight,
         )
-        score_key = 'hybrid_score'
+        score_key = "hybrid_score"
 
     # Deduplicate: only best chunk per document
     results = deduplicate_by_document(results, score_key)
