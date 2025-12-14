@@ -36,7 +36,8 @@ AVAILABLE_STEPS = {
 }
 
 
-REPO_ROOT = Path(__file__).resolve().parent
+PIPELINE_DIR = Path(__file__).resolve().parent
+REPO_ROOT = PIPELINE_DIR.parent.parent
 
 
 def _tool_python() -> str:
@@ -76,7 +77,7 @@ def _run_step(
     debug: bool,
 ) -> dict[str, Any]:
     step_name, script, required_prefix = AVAILABLE_STEPS[step_key]
-    script_path = (REPO_ROOT / script).as_posix()
+    script_path = (PIPELINE_DIR / script).as_posix()
 
     cmd = [python_exe, script_path, *required_prefix, str(md_file), "--format", child_format]
     if debug and child_format == "json":

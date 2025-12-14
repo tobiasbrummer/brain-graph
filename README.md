@@ -6,6 +6,7 @@ Semantic knowledge base with vector search and graph queries.
 
 ```bash
 pip install -e .
+pip install -e ".[dev]"  # pytest/ruff/black
 ```
 
 ## Usage
@@ -27,6 +28,7 @@ brain search semantic "your query"
 # Process markdown file
 brain pipeline chunk file.md
 brain pipeline embed file.md
+brain pipeline taxonomy-embed
 brain pipeline taxonomy file.md
 brain pipeline summarize file.md
 
@@ -64,7 +66,7 @@ brain agent docs searcher --format=json
 
 ## Configuration
 
-Place a `.brain_graph_config.json` in your home directory or project root:
+Create `.brain_graph/config/config.json` (or `config.json` as fallback):
 
 ```json
 {

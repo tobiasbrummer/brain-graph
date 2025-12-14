@@ -1,53 +1,79 @@
-#!/usr/bin/env python3
-"""Test script for reranker integration"""
+from __future__ import annotations
 
 import duckdb
-from search.reranking import multiway_search_with_all_reranking
-from search import embed_query
-from file_utils import load_config
+import pyarrow as pa
+import pyarrow.parquet as pq
 
-# Load config and DB
-config = load_config()
-con = duckdb.connect(".brain_graph/brain.duckdb", read_only=True)
+from brain_graph.search.reranking import _get_parquet_id_map, reciprocal_rank_fusion, rerank_with_full_vectors
 
-# Test query
-query = "Saurer Regen"
-print(f"Query: {query}\n")
 
-# Get query embedding
-print("Generating query embedding...")
-query_emb = embed_query(query, config)
-print(f"  ✓ Got {len(query_emb)}d embedding\n")
+def test_reciprocal_rank_fusion_combines_rankings() -> None:
+    rankings = [
+        [{"chunk_id": "a"}, {"chunk_id": "b"}, {"chunk_id": "c"}],
+        [{"chunk_id": "a"}, {"chunk_id": "c"}, {"chunk_id": "b"}],
+        [{"chunk_id": "a"}],
+    ]
 
-# Test multi-way search with all reranking stages
-print("=== Multi-way Search with Full Pipeline ===")
-print("Pipeline: Semantic + BM25 + Fuzzy → RRF → 1024d Rerank → Model Rerank\n")
+    combined = reciprocal_rank_fusion(rankings, k=60)
+    assert combined
+    assert combined[0]["chunk_id"] == "a"
+    assert "rrf_score" in combined[0]
 
-results = multiway_search_with_all_reranking(
-    con,
-    query,
-    query_emb,
-    config,
-    initial_k=20,  # Retrieve 20 candidates per method
-    final_k=5,  # Return top 5
-    rerank_with_full=True,  # Use full 1024d vectors
-    rerank_with_model_enable=True,  # Use reranker model
-)
 
-print(f"\n=== Final Results (Top {len(results)}) ===\n")
-for i, r in enumerate(results, 1):
-    # Get the highest score available
-    score = r.get("rerank_score", r.get("similarity", r.get("rrf_score", 0)))
-    score_type = (
-        "rerank" if "rerank_score" in r else ("1024d" if "similarity" in r else "rrf")
+def test_rerank_with_full_vectors_orders_by_similarity(tmp_path) -> None:
+    parquet_path = tmp_path / "embeddings.parquet"
+
+    table = pa.table(
+        {
+            "chunk_idx": ["a", "b"],
+            "embedding": [[1.0, 0.0], [0.0, 1.0]],
+        }
+    )
+    pq.write_table(table, parquet_path)
+
+    scores = rerank_with_full_vectors(
+        candidate_ids=["a", "b"],
+        query_embedding_full=[1.0, 0.0],
+        parquet_path=parquet_path,
+        top_k=2,
     )
 
-    print(f"{i}. [{score:.4f} {score_type}] {r['chunk_id']}")
+    assert [s["chunk_id"] for s in scores] == ["a", "b"]
+    assert scores[0]["similarity"] > scores[1]["similarity"]
 
-    # Show snippet
-    text = r.get("summary") or r.get("text", "")
-    snippet = text[:150].replace("\n", " ")
-    print(f"   {snippet}...")
-    print()
 
-con.close()
+def test_get_parquet_id_map_supports_new_schema() -> None:
+    con = duckdb.connect(":memory:")
+    con.execute(
+        """
+        CREATE TABLE chunk_embeddings_256d (
+            chunk_id VARCHAR,
+            chunk_local_id VARCHAR,
+            source_file VARCHAR
+        )
+        """
+    )
+    con.execute(
+        "INSERT INTO chunk_embeddings_256d VALUES ('ULID_CHUNK', 'chunk_local', 'doc.md')"
+    )
+
+    parquet_ids, id_map = _get_parquet_id_map(con, "doc.md", ["ULID_CHUNK"])
+    assert parquet_ids == ["chunk_local"]
+    assert id_map == {"chunk_local": "ULID_CHUNK"}
+
+
+def test_get_parquet_id_map_falls_back_without_column() -> None:
+    con = duckdb.connect(":memory:")
+    con.execute(
+        """
+        CREATE TABLE chunk_embeddings_256d (
+            chunk_id VARCHAR,
+            source_file VARCHAR
+        )
+        """
+    )
+    con.execute("INSERT INTO chunk_embeddings_256d VALUES ('chunk_a', 'doc.md')")
+
+    parquet_ids, id_map = _get_parquet_id_map(con, "doc.md", ["chunk_a"])
+    assert parquet_ids == ["chunk_a"]
+    assert id_map is None

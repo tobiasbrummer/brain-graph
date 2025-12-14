@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,8 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 def cmd_agent_docs(args: argparse.Namespace) -> int:
     """Get documentation for a specific tool."""
     script = REPO_ROOT / "brain_graph" / "cli" / "doc_extractor.py"
-    
-    cmd = [sys.executable, str(script), args.tool]
+
+    python_exe = (os.environ.get("BG_PYTHON") or "").strip() or sys.executable
+    cmd = [python_exe, str(script), args.tool]
     
     if args.format:
         cmd.extend(["--format", args.format])

@@ -1,24 +1,17 @@
 #!/usr/bin/env python3
 """
-Embedder: Texte → Parquet mit Vektoren.
+Embedder: Chunk-Texte → Parquet mit Vektoren.
 
-Liest Config aus pyproject.toml, nimmt Texte via stdin oder JSON-File,
-gibt Parquet mit Embeddings aus.
+Liest eine Markdown-Datei (mit `+id:<ULID>`), lädt die dazugehörigen
+`*.nodes.json` / `*.edges.json` Dateien aus `.brain_graph/data/`, extrahiert
+Chunk-Texte via `char_start/char_end` und schreibt ein Parquet mit Embeddings.
 
-Unterstützt zwei Input-Modi:
-1. Direkte Texte: JSON-Array mit Strings
-2. Nodes mit Ranges: JSON-Array mit Objekten (char_start/char_end)
+Config:
+    `.brain_graph/config/config.json` (oder `config.json` fallback)
 
 Usage:
-    # Direkte Texte
-    echo '["text1", "text2"]' | python embedder.py -o output.parquet
-    python embedder.py -i texts.json -o output.parquet
-
-    # Nodes mit Ranges (source wird automatisch abgeleitet)
-    python embedder.py -i Jazz.md.nodes.json -o output.parquet
-
-    # Nodes mit Ranges (expliziter source)
-    python embedder.py -i nodes.json -s source.md -o output.parquet
+    brain pipeline embed vault/YYYY-MM/file.md
+    python -m brain_graph.pipeline.embedder -i vault/YYYY-MM/file.md
 """
 
 import argparse

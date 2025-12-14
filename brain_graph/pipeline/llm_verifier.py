@@ -29,7 +29,7 @@ from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_re
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
-    """Lädt Config aus config.json."""
+    """Load verifier config from `.brain_graph/config/config.json` (or `config.json`)."""
     defaults = {
         "summary_base_url": "http://localhost:8100/v1",
         "summary_model": "mistral-7b-instruct",
@@ -38,6 +38,10 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
 
     if config_path is None:
         for parent in [Path.cwd(), *Path.cwd().parents]:
+            candidate = parent / ".brain_graph" / "config" / "config.json"
+            if candidate.exists():
+                config_path = candidate
+                break
             candidate = parent / "config.json"
             if candidate.exists():
                 config_path = candidate

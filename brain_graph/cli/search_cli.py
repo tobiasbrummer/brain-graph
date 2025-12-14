@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +15,8 @@ def cmd_search(args: argparse.Namespace) -> int:
     """Execute search command."""
     script = REPO_ROOT / "brain_graph" / "search" / "searcher.py"
 
-    cmd = [sys.executable, str(script), args.query]
+    python_exe = (os.environ.get("BG_PYTHON") or "").strip() or sys.executable
+    cmd = [python_exe, str(script), args.query]
 
     # Add mode-specific flags
     if args.mode == "fuzzy":

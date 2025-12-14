@@ -4,11 +4,12 @@ Pydantic models generated from JSON schemas.
 Single source of truth for data validation across the pipeline.
 """
 
+import re
 from datetime import datetime
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ============================================================================
@@ -19,17 +20,18 @@ from pydantic import BaseModel, Field, field_validator
 class Section(BaseModel):
     """Document structure section (heading hierarchy)."""
 
+    model_config = ConfigDict(extra="forbid")
+
     id: str = Field(pattern=r"^(sec_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     title: str = Field(min_length=1)
     level: int = Field(ge=1, le=6, description="Heading level 1-6")
 
-    class Config:
-        extra = "forbid"
-
 
 class Chunk(BaseModel):
     """Text chunk with content-addressable ID."""
+
+    model_config = ConfigDict(extra="forbid")
 
     id: str = Field(pattern=r"^(chunk_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
@@ -45,9 +47,6 @@ class Chunk(BaseModel):
     summary: Optional[str] = None
     categories: list[str] = Field(default_factory=list)
 
-    class Config:
-        extra = "forbid"
-
 
 class EntityType(str, Enum):
     """Named entity types from spaCy NER."""
@@ -61,6 +60,8 @@ class EntityType(str, Enum):
 class Entity(BaseModel):
     """Named entity extracted from text (NER)."""
 
+    model_config = ConfigDict(extra="forbid")
+
     id: str = Field(pattern=r"^(ent_[a-z0-9_-]+|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     entity_type: EntityType
@@ -68,19 +69,15 @@ class Entity(BaseModel):
     occurrences: int = Field(ge=1)
     mentioned_in: list[str] = Field(default_factory=list)
 
-    class Config:
-        extra = "forbid"
-
 
 class Nodes(BaseModel):
     """Graph nodes grouped by type."""
 
+    model_config = ConfigDict(extra="forbid")
+
     sections: list[Section] = Field(default_factory=list)
     chunks: list[Chunk] = Field(default_factory=list)
     entities: list[Entity] = Field(default_factory=list)
-
-    class Config:
-        extra = "forbid"
 
 
 # ============================================================================
@@ -103,15 +100,14 @@ class EdgeType(str, Enum):
 class Edge(BaseModel):
     """Graph edge connecting two nodes."""
 
+    model_config = ConfigDict(extra="forbid")
+
     from_id: str
     to_id: str
     type: EdgeType
     weight: Optional[float] = Field(None, ge=0.0, le=1.0)
     similarity: Optional[float] = Field(None, ge=0.0, le=1.0)
     overlap_chars: Optional[int] = Field(None, ge=0)
-
-    class Config:
-        extra = "forbid"
 
 
 # ============================================================================
@@ -131,14 +127,30 @@ class LinkType(str, Enum):
 class Link(BaseModel):
     """Document link (+link:, +image:, +projekt: from SYNTAX.md)."""
 
+    model_config = ConfigDict(extra="forbid")
+
     type: LinkType
-    target_id: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
+    target_id: str
     source_node: Optional[str] = None
     context: Optional[str] = None
     char_offset: Optional[int] = Field(None, ge=0)
 
-    class Config:
-        extra = "forbid"
+    @model_validator(mode="after")
+    def validate_target_id(self) -> "Link":
+        """
+        Validate target_id based on link type.
+
+        - Internal links (`link`, `image`, `projekt`) must point to a full ULID.
+        - External references (`quelle`) accept any non-empty string (URL, DOI, etc.).
+        """
+        if self.type == LinkType.QUELLE:
+            if not self.target_id.strip():
+                raise ValueError("target_id must be non-empty for type=quelle")
+            return self
+
+        if not re.fullmatch(r"^[0-9A-HJKMNP-TV-Z]{26}$", self.target_id):
+            raise ValueError("target_id must be a 26-char ULID for internal link types")
+        return self
 
 
 # ============================================================================
@@ -160,13 +172,11 @@ class ProcessingStep(str, Enum):
 class ProcessingStepInfo(BaseModel):
     """Information about a processing step."""
 
+    model_config = ConfigDict(extra="allow")
+
     step: ProcessingStep
     completed: bool
     timestamp: datetime
-
-    # Step-specific metadata (flexible)
-    class Config:
-        extra = "allow"
 
 
 class Processing(BaseModel):
@@ -193,6 +203,8 @@ class DocType(str, Enum):
 
 class Document(BaseModel):
     """Complete document with metadata, graph structure, links, and processing info."""
+
+    model_config = ConfigDict(extra="forbid")
 
     # Metadata
     id: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
@@ -235,9 +247,6 @@ class Document(BaseModel):
 
     # Processing
     processing: Processing
-
-    class Config:
-        extra = "forbid"
 
     @field_validator("content_hash", "file_hash")
     @classmethod
@@ -288,6 +297,8 @@ class Document(BaseModel):
 class TaxonomyCategory(BaseModel):
     """Taxonomy category node for classification."""
 
+    model_config = ConfigDict(extra="forbid")
+
     id: str = Field(description="Category slug (kebab-case)")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     type: Literal["category"] = "category"
@@ -295,6 +306,3 @@ class TaxonomyCategory(BaseModel):
     description: Optional[str] = None
     keywords: list[str] = Field(default_factory=list)
     embedding: Optional[list[float]] = None
-
-    class Config:
-        extra = "forbid"

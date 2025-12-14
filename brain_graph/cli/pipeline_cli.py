@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 PIPELINE_TOOLS = {
     "chunk": ("brain_graph/pipeline/chunker.py", "Chunk markdown file into semantic sections"),
     "embed": ("brain_graph/pipeline/embedder.py", "Generate embeddings for chunks"),
+    "taxonomy-embed": ("brain_graph/pipeline/taxonomy_embedder.py", "Generate embeddings for taxonomy categories"),
     "taxonomy": ("brain_graph/pipeline/taxonomy_matcher.py", "Match content to taxonomy categories"),
     "verify": ("brain_graph/pipeline/llm_verifier.py", "Verify content with LLM"),
     "ner": ("brain_graph/pipeline/ner_extractor.py", "Extract named entities"),
@@ -25,8 +27,9 @@ def cmd_pipeline(args: argparse.Namespace) -> int:
     tool = args.tool
     script_path, _ = PIPELINE_TOOLS[tool]
     script = REPO_ROOT / script_path
-    
-    cmd = [sys.executable, str(script)]
+
+    python_exe = (os.environ.get("BG_PYTHON") or "").strip() or sys.executable
+    cmd = [python_exe, str(script)]
     
     # Most tools take -i <file>
     if args.file and tool != "process-all":

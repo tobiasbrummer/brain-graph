@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 import duckdb
-from build_db import BrainGraphDB
+from db_builder import BrainGraphDB
 
 
 def test_database_structure(con: duckdb.DuckDBPyConnection):
@@ -25,9 +25,12 @@ def test_database_structure(con: duckdb.DuckDBPyConnection):
     table_names = [t[0] for t in tables]
 
     required_tables = [
-        'nodes', 'edges',
-        'chunk_embeddings_256d', 'taxonomy_embeddings_256d',
-        'embedding_sources', 'meta'
+        "nodes",
+        "edges",
+        "chunk_embeddings_256d",
+        "taxonomy_embeddings_256d",
+        "embedding_sources",
+        "meta",
     ]
 
     print("Tables:")
@@ -40,7 +43,9 @@ def test_database_structure(con: duckdb.DuckDBPyConnection):
     print(f"\nIndexes: {len(indexes)} total")
 
     # Check extensions
-    extensions = con.execute("SELECT * FROM duckdb_extensions() WHERE loaded").fetchall()
+    extensions = con.execute(
+        "SELECT * FROM duckdb_extensions() WHERE loaded"
+    ).fetchall()
     print(f"\nExtensions loaded:")
     for ext in extensions:
         print(f"  - {ext[0]}")
@@ -51,20 +56,28 @@ def test_node_counts(con: duckdb.DuckDBPyConnection):
     print("\n=== Testing Node and Edge Counts ===\n")
 
     # Nodes by type
-    result = con.execute("SELECT type, COUNT(*) FROM nodes GROUP BY type ORDER BY COUNT(*) DESC").fetchall()
+    result = con.execute(
+        "SELECT type, COUNT(*) FROM nodes GROUP BY type ORDER BY COUNT(*) DESC"
+    ).fetchall()
     print("Nodes by type:")
     for node_type, count in result:
         print(f"  {node_type}: {count}")
 
     # Edges by type
-    result = con.execute("SELECT type, COUNT(*) FROM edges GROUP BY type ORDER BY COUNT(*) DESC").fetchall()
+    result = con.execute(
+        "SELECT type, COUNT(*) FROM edges GROUP BY type ORDER BY COUNT(*) DESC"
+    ).fetchall()
     print("\nEdges by type:")
     for edge_type, count in result:
         print(f"  {edge_type}: {count}")
 
     # Embeddings
-    chunk_emb_count = con.execute("SELECT COUNT(*) FROM chunk_embeddings_256d").fetchone()[0]
-    tax_emb_count = con.execute("SELECT COUNT(*) FROM taxonomy_embeddings_256d").fetchone()[0]
+    chunk_emb_count = con.execute(
+        "SELECT COUNT(*) FROM chunk_embeddings_256d"
+    ).fetchone()[0]
+    tax_emb_count = con.execute(
+        "SELECT COUNT(*) FROM taxonomy_embeddings_256d"
+    ).fetchone()[0]
     print(f"\nEmbeddings:")
     print(f"  Chunk embeddings (256d): {chunk_emb_count}")
     print(f"  Taxonomy embeddings (256d): {tax_emb_count}")
@@ -75,7 +88,9 @@ def test_semantic_search(con: duckdb.DuckDBPyConnection):
     print("\n=== Testing Semantic Search (256d) ===\n")
 
     # Get a random embedding to use as query
-    result = con.execute("SELECT embedding FROM chunk_embeddings_256d LIMIT 1").fetchone()
+    result = con.execute(
+        "SELECT embedding FROM chunk_embeddings_256d LIMIT 1"
+    ).fetchone()
     if not result:
         print("No embeddings found, skipping semantic search test")
         return
@@ -83,7 +98,8 @@ def test_semantic_search(con: duckdb.DuckDBPyConnection):
     query_emb = result[0]
 
     # Search
-    results = con.execute("""
+    results = con.execute(
+        """
         SELECT
             n.id,
             n.text,
@@ -93,11 +109,15 @@ def test_semantic_search(con: duckdb.DuckDBPyConnection):
         WHERE n.type = 'chunk'
         ORDER BY similarity DESC
         LIMIT 5
-    """, [query_emb]).fetchall()
+    """,
+        [query_emb],
+    ).fetchall()
 
     print(f"Found {len(results)} results")
     for i, (chunk_id, text, sim) in enumerate(results, 1):
-        text_preview = text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
+        text_preview = (
+            text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
+        )
         print(f"\n{i}. {chunk_id} (sim: {sim:.3f})")
         print(f"   {text_preview}")
 
@@ -107,9 +127,11 @@ def test_fulltext_search(con: duckdb.DuckDBPyConnection):
     print("\n=== Testing Full-Text Search (BM25) ===\n")
 
     # Get a word from existing text
-    result = con.execute("""
+    result = con.execute(
+        """
         SELECT text FROM nodes WHERE text IS NOT NULL AND length(text) > 20 LIMIT 1
-    """).fetchone()
+    """
+    ).fetchone()
 
     if not result:
         print("No text found, skipping FTS test")
@@ -119,7 +141,8 @@ def test_fulltext_search(con: duckdb.DuckDBPyConnection):
     query_word = result[0].split()[0]
     print(f"Searching for: '{query_word}'")
 
-    results = con.execute("""
+    results = con.execute(
+        """
         SELECT
             id,
             text,
@@ -128,11 +151,15 @@ def test_fulltext_search(con: duckdb.DuckDBPyConnection):
         WHERE fts_main_nodes.match_bm25(id, ?) IS NOT NULL
         ORDER BY score DESC
         LIMIT 5
-    """, [query_word, query_word]).fetchall()
+    """,
+        [query_word, query_word],
+    ).fetchall()
 
     print(f"Found {len(results)} results")
     for i, (node_id, text, score) in enumerate(results, 1):
-        text_preview = text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
+        text_preview = (
+            text[:100] + "..." if text and len(text) > 100 else (text or "[no text]")
+        )
         print(f"\n{i}. {node_id} (score: {score:.3f})")
         print(f"   {text_preview}")
 
@@ -142,13 +169,15 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
     print("\n=== Testing Property Graph Queries (DuckPGQ) ===\n")
 
     # Prefer a "section" node that actually has outgoing edges; otherwise fall back to any edge source
-    result = con.execute("""
+    result = con.execute(
+        """
         SELECT n.id
         FROM nodes n
         JOIN edges e ON e.from_id = n.id
         WHERE n.type = 'section'
         LIMIT 1
-    """).fetchone()
+    """
+    ).fetchone()
     source_id = None
     if result:
         source_id = result[0]
@@ -166,7 +195,8 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
         # DuckPGQ doesn't reliably support parameter placeholders inside GRAPH_TABLE,
         # so we inline the ID (it's sourced from the DB itself).
         source_id_sql = str(source_id).replace("'", "''")
-        results = con.execute(f"""
+        results = con.execute(
+            f"""
             SELECT *
             FROM GRAPH_TABLE (brain_graph
                 MATCH (a:nodes)-[e:edges]->(b:nodes)
@@ -179,7 +209,8 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
                 )
             ) gt
             LIMIT 10
-        """).fetchall()
+        """
+        ).fetchall()
 
         print(f"GRAPH_TABLE returned {len(results)} rows")
         for i, (from_id, rel, tid, ttype) in enumerate(results, 1):
@@ -189,7 +220,8 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
         print(f"GRAPH_TABLE failed, falling back to SQL ({e})")
 
     # Plain SQL fallback
-    results = con.execute("""
+    results = con.execute(
+        """
         SELECT
             n.id,
             n.type,
@@ -201,7 +233,9 @@ def test_graph_queries(con: duckdb.DuckDBPyConnection):
         JOIN nodes target ON e.to_id = target.id
         WHERE n.id = ?
         LIMIT 10
-    """, [source_id]).fetchall()
+    """,
+        [source_id],
+    ).fetchall()
 
     print(f"Found {len(results)} connections")
     for i, (nid, ntype, rel, tid, ttype) in enumerate(results, 1):
@@ -213,9 +247,11 @@ def test_metadata_filtering(con: duckdb.DuckDBPyConnection):
     print("\n=== Testing Metadata Filtering ===\n")
 
     # Language filter
-    result = con.execute("""
+    result = con.execute(
+        """
         SELECT language, COUNT(*) FROM nodes WHERE language IS NOT NULL GROUP BY language
-    """).fetchall()
+    """
+    ).fetchall()
 
     if result:
         print("Nodes by language:")
@@ -223,14 +259,16 @@ def test_metadata_filtering(con: duckdb.DuckDBPyConnection):
             print(f"  {lang}: {count}")
 
         # Category filter
-        result = con.execute("""
+        result = con.execute(
+            """
             SELECT c.to_id as category, COUNT(*) as count
             FROM edges c
             WHERE c.type = 'categorized_as'
             GROUP BY c.to_id
             ORDER BY count DESC
             LIMIT 5
-        """).fetchall()
+        """
+        ).fetchall()
 
         if result:
             print("\nTop 5 categories:")
@@ -248,7 +286,8 @@ def test_meta_table(con: duckdb.DuckDBPyConnection):
 
     if count > 0:
         # Show sample meta data
-        result = con.execute("""
+        result = con.execute(
+            """
             SELECT
                 ulid,
                 source_file,
@@ -258,7 +297,8 @@ def test_meta_table(con: duckdb.DuckDBPyConnection):
                 created_at
             FROM meta
             LIMIT 3
-        """).fetchall()
+        """
+        ).fetchall()
 
         print("\nSample meta entries:")
         for i, (ulid, file, hash, commit, dirty, created) in enumerate(result, 1):
@@ -273,11 +313,14 @@ def test_meta_table(con: duckdb.DuckDBPyConnection):
         # Test hash lookup (for deduplication)
         sample_hash = result[0][2] if result else None
         if sample_hash:
-            dup_check = con.execute("""
+            dup_check = con.execute(
+                """
                 SELECT ulid, source_file
                 FROM meta
                 WHERE source_hash = ?
-            """, [sample_hash]).fetchone()
+            """,
+                [sample_hash],
+            ).fetchone()
 
             print(f"\nHash lookup test (for dedup):")
             print(f"  Query hash: {sample_hash}")
@@ -298,7 +341,10 @@ def main():
         try:
             db.import_directory_fast(data_dir)
         except Exception as e:
-            print(f"Fast import failed ({e}), falling back to legacy import...", file=sys.stderr)
+            print(
+                f"Fast import failed ({e}), falling back to legacy import...",
+                file=sys.stderr,
+            )
             db.import_directory(data_dir)
         db.build_indexes()
         con = db.con
@@ -318,6 +364,7 @@ def main():
     except Exception as e:
         print(f"\nError during testing: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

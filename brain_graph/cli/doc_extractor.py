@@ -22,6 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TOOL_MAP = {
     "chunker": "brain_graph.pipeline.chunker",
     "embedder": "brain_graph.pipeline.embedder",
+    "taxonomy_embedder": "brain_graph.pipeline.taxonomy_embedder",
+    "taxonomy-embed": "brain_graph.pipeline.taxonomy_embedder",
     "taxonomy": "brain_graph.pipeline.taxonomy_matcher",
     "verify": "brain_graph.pipeline.llm_verifier",
     "ner": "brain_graph.pipeline.ner_extractor",

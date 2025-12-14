@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-import json
+import os
 import subprocess
 import sys
 import time
@@ -19,7 +19,8 @@ def cmd_daemon_start(args: argparse.Namespace) -> int:
     """Start the search daemon."""
     script = REPO_ROOT / "brain_graph" / "search" / "daemon.py"
 
-    cmd = [sys.executable, str(script)]
+    python_exe = (os.environ.get("BG_PYTHON") or "").strip() or sys.executable
+    cmd = [python_exe, str(script)]
 
     if args.host:
         cmd.extend(["--host", args.host])

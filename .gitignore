@@ -16,7 +16,7 @@ dist/
 *.log
 .claude/
 PoC/
-test_data/
+tests/data
 vault/
 .brain_graph/data/
 .brain_graph/*.duckdb

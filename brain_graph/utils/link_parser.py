@@ -55,12 +55,15 @@ def extract_links(text: str, context_chars: int = 100) -> list[ParsedLink]:
         link_type = match.group("type").lower()
         target = match.group("target")
 
-        # Extract ULID from target (may be short or full)
+        # Extract ULID from target (may be short or full). For `+quelle:...`,
+        # allow arbitrary URL/reference strings.
         ulid_match = re.search(SHORT_ULID_PATTERN, target)
-        if not ulid_match:
-            continue
-
-        target_id = ulid_match.group()
+        if ulid_match:
+            target_id = ulid_match.group()
+        else:
+            if link_type != "quelle":
+                continue
+            target_id = target
 
         # Extract context
         start = max(0, match.start() - context_chars)

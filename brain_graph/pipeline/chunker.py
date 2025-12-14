@@ -6,8 +6,13 @@ Parst Markdown-Struktur, splittet Text in adaptive Chunks mit Overlap,
 behandelt Codeblöcke atomar.
 
 Usage:
-    python chunker.py -i input.md -o output_dir/
-    python chunker.py -i input.md  # Output: input.md.nodes.json, input.md.edges.json
+    brain pipeline chunk input.md
+    python -m brain_graph.pipeline.chunker -i input.md
+
+Outputs (default):
+    - `.brain_graph/data/nodes/<YYYY-MM>/*.nodes.json`
+    - `.brain_graph/data/edges/<YYYY-MM>/*.edges.json`
+    - `.brain_graph/data/meta/<YYYY-MM>/*.meta.json`
 """
 
 import argparse
@@ -32,6 +37,7 @@ from brain_graph.utils.file_utils import (
     get_output_paths,
     ensure_output_dirs,
     get_month_folder,
+    slugify,
     get_source_hash,
     get_source_version
 )
@@ -42,7 +48,16 @@ from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_re
 # -----------------------------------------------------------------------------
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
-    """Lädt Config aus config.json."""
+    """
+    Load chunking configuration.
+
+    If `config_path` is not provided, searches for a config file in the current
+    directory and parents in this order:
+    1) `.brain_graph/config/config.json` (new structure)
+    2) `config.json` (legacy fallback)
+
+    For backwards compatibility, `chunking_*` keys are mapped to `chunk_*`.
+    """
     defaults = {
         "chunk_target_tokens": 384,
         "chunk_min_tokens": 100,
@@ -52,6 +67,10 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
 
     if config_path is None:
         for parent in [Path.cwd(), *Path.cwd().parents]:
+            candidate = parent / ".brain_graph" / "config" / "config.json"
+            if candidate.exists():
+                config_path = candidate
+                break
             candidate = parent / "config.json"
             if candidate.exists():
                 config_path = candidate
@@ -76,14 +95,15 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
 # ULID Generation
 # -----------------------------------------------------------------------------
 
-RUN_TS = datetime.now(timezone.utc)
-RUN_TS_BYTES = int(RUN_TS.timestamp() * 1000).to_bytes(6, "big")
+def _ulid_timestamp_bytes(ulid_str: str) -> bytes:
+    """Return the 6 timestamp bytes from a ULID string."""
+    return ulid.from_str(ulid_str).bytes[:6]
 
 
-def make_ulid(text: str) -> str:
-    """Deterministische ULID aus Text."""
-    digest = hashlib.sha1(text.encode("utf-8")).digest()
-    return str(ulid.from_bytes(RUN_TS_BYTES + digest[:10]))
+def make_ulid(seed: str, *, ts_bytes: bytes) -> str:
+    """Deterministische ULID aus Seed + Timestamp-Bytes (ULID time-part)."""
+    digest = hashlib.sha1(seed.encode("utf-8")).digest()
+    return str(ulid.from_bytes(ts_bytes + digest[:10]))
 
 
 # -----------------------------------------------------------------------------
@@ -527,10 +547,14 @@ def build_graph(
     blocks: list[Block],
     source_file: str,
     config: dict[str, Any],
+    *,
+    doc_ulid: str,
 ) -> tuple[list[Node], list[Edge]]:
     """Baut Nodes und Edges aus Blöcken."""
     nodes: list[Node] = []
     edges: list[Edge] = []
+
+    ts_bytes = _ulid_timestamp_bytes(doc_ulid)
 
     # Section-Stack für Hierarchie
     section_stack: list[Node] = []
@@ -578,7 +602,7 @@ def build_graph(
             node_id = make_id("sec", f"{source_file}:{block.content}")
             node = Node(
                 id=node_id,
-                ulid=make_ulid(node_id),
+                ulid=make_ulid(node_id, ts_bytes=ts_bytes),
                 type="section",
                 content=block.content,
                 title=block.content,
@@ -612,7 +636,7 @@ def build_graph(
             node_id = make_id("code", f"{source_file}:{block.char_start}:{block.content[:50]}")
             node = Node(
                 id=node_id,
-                ulid=make_ulid(node_id),
+                ulid=make_ulid(node_id, ts_bytes=ts_bytes),
                 type="code",
                 content=block.content,
                 language=block.language,
@@ -669,7 +693,7 @@ def build_graph(
                 node_id = make_id("chunk", f"{source_file}:{chunk_counter}:{chunk_text[:50]}")
                 node = Node(
                     id=node_id,
-                    ulid=make_ulid(node_id),
+                    ulid=make_ulid(node_id, ts_bytes=ts_bytes),
                     type="chunk",
                     content=chunk_text,
                     language=block_lang,
@@ -741,9 +765,6 @@ def main():
         # ULID generieren/extrahieren und in MD injizieren
         doc_ulid = get_or_generate_ulid(args.input, text)
         print(f"Document ULID: {doc_ulid}", file=sys.stderr)
-
-        # Vault-Pfad generieren und Datei kopieren
-        from file_utils import get_month_folder, slugify
 
         # Monat aus Input-Pfad nutzen (falls vault/YYYY-MM/) oder aktuellen Monat
         parent_name = args.input.parent.name
@@ -818,7 +839,7 @@ def main():
         print(f"Parsed {len(blocks)} blocks", file=sys.stderr)
 
         # Graph bauen (mit automatischer Spracherkennung pro Block)
-        nodes, edges = build_graph(blocks, working_file.name, config)
+        nodes, edges = build_graph(blocks, working_file.name, config, doc_ulid=doc_ulid)
 
         # Nodes und Edges mit leeren Feldern für spätere Schritte erweitern
         nodes_data = []

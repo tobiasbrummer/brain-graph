@@ -518,17 +518,18 @@ def main():
                 print(f"Warning: Could not load DuckDB extension '{ext}' ({e})", file=sys.stderr)
 
     try:
-        # Check if DB exists, otherwise build from data directory
+        # Check if DB exists, otherwise build from documents directory
         db_path = Path(args.db)
         data_dir = Path(".brain_graph/data")
+        documents_dir = data_dir / "documents"
 
         if not db_path.exists():
-            if data_dir.exists() and any(data_dir.rglob("*.nodes.json")):
-                print(f"Database not found, building from {data_dir}...", file=sys.stderr)
-                from build_db import BrainGraphDB
+            if documents_dir.exists() and any(documents_dir.rglob("*.document.json")):
+                print(f"Database not found, building in-memory DB from {documents_dir}...", file=sys.stderr)
+                from brain_graph.db.db_builder import BrainGraphDB
 
                 db = BrainGraphDB(":memory:")
-                db.import_directory(data_dir)
+                db.import_directory_fast(data_dir)
                 db.build_indexes()
                 con = db.con
                 print("Database ready", file=sys.stderr)
@@ -569,14 +570,17 @@ def main():
             print("Building indexes...", file=sys.stderr)
 
             _load_extension_safe("vss")
-            con.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
-                ON chunk_embeddings_256d
-                USING HNSW (embedding)
-                WITH (metric = 'cosine')
-            """
-            )
+            try:
+                con.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
+                    ON chunk_embeddings_256d
+                    USING HNSW (embedding)
+                    WITH (metric = 'cosine')
+                    """
+                )
+            except duckdb.Error as e:
+                print(f"Warning: Could not build HNSW index, skipping ({e})", file=sys.stderr)
 
             _load_extension_safe("fts")
 
@@ -587,19 +591,22 @@ def main():
                 > 0
             )
             stopwords_param = "german_stopwords" if has_stopwords else "none"
-            con.execute(
-                f"""
-                PRAGMA create_fts_index(
-                    'nodes', 'id', 'text', 'summary', 'title', 'description',
-                    stemmer='german',
-                    stopwords='{stopwords_param}',
-                    ignore='(\\.|[^a-zäöüß])+',
-                    strip_accents=1,
-                    lower=1,
-                    overwrite=1
+            try:
+                con.execute(
+                    f"""
+                    PRAGMA create_fts_index(
+                        'nodes', 'id', 'text', 'summary', 'title', 'description',
+                        stemmer='german',
+                        stopwords='{stopwords_param}',
+                        ignore='(\\.|[^a-zäöüß])+',
+                        strip_accents=1,
+                        lower=1,
+                        overwrite=1
+                    )
+                    """
                 )
-            """
-            )
+            except duckdb.Error as e:
+                print(f"Warning: Could not build FTS index, skipping ({e})", file=sys.stderr)
 
             print("Database ready (indexes built)", file=sys.stderr)
 
