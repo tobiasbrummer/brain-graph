@@ -19,8 +19,8 @@ from typing import Any
 
 import duckdb
 
-from file_utils import get_source_hash
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.file_utils import get_source_hash
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def check_duplicate(input_file: Path, db_path: str) -> dict[str, Any] | None:

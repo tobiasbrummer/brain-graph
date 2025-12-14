@@ -19,7 +19,7 @@ from typing import List, Dict, Any, Optional
 
 import ulid
 
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 HEADER_RE = re.compile(r"^(#+)\s+(.*)$")
 FIELD_RE = re.compile(r"^\+([^:]+):(.*)$")

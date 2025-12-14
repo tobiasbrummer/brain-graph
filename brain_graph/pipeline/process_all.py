@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 # Available pipeline steps
 AVAILABLE_STEPS = {

@@ -1,201 +1,24 @@
 #!/usr/bin/env python3
+"""Brain Graph CLI wrapper - delegates to brain_graph.cli.main."""
 from __future__ import annotations
 
-import argparse
-import json
 import os
-import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 
+# Add repo root to path so we can import brain_graph
 REPO_ROOT = Path(__file__).resolve().parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-
-def _tool_python() -> str:
-    override = (os.environ.get("BG_PYTHON") or "").strip()
-    if override:
-        return override
+# Respect BG_PYTHON environment variable for venv selection
+if not os.environ.get("BG_PYTHON"):
     venv_python = REPO_ROOT / ".venv" / "bin" / "python"
     if venv_python.exists():
-        return venv_python.as_posix()
-    return sys.executable
-
-
-SCRIPT_MAP: dict[str, tuple[str, list[str]]] = {
-    "chunk": ("chunker.py", ["-i"]),
-    "embed": ("embedder.py", ["-i"]),
-    "taxonomy": ("taxonomy_matcher.py", ["-i"]),
-    "verify": ("llm_verifier.py", ["-i"]),
-    "ner": ("ner_extractor.py", ["-i"]),
-    "summarize": ("summarizer.py", ["-i"]),
-    "convert": ("document_converter.py", []),
-    "build-db": ("build_db.py", []),
-    "taxonomy-convert": ("taxonomy_converter.py", []),
-    "taxonomy-embed": ("taxonomy_embedder.py", []),
-    "config-convert": ("config_converter.py", []),
-    "check-duplicate": ("check_duplicate.py", []),
-    "process-all": ("process_all.py", []),
-}
-
-
-def _parse_json_maybe(text: str) -> tuple[dict[str, Any] | None, str]:
-    stdout = text.strip()
-    if not stdout:
-        return None, ""
-
-    # Robust parsing: accept accidental extra lines and try the last non-empty line.
-    lines = [ln for ln in stdout.splitlines() if ln.strip()]
-    candidate = lines[-1] if lines else stdout
-    try:
-        obj = json.loads(candidate)
-        if isinstance(obj, dict):
-            return obj, candidate
-    except json.JSONDecodeError:
-        return None, stdout
-    return None, stdout
-
-
-def _pretty_print_result(result: dict[str, Any]) -> None:
-    tool = result.get("tool", "unknown")
-    status = result.get("status", "unknown")
-    duration = result.get("duration_ms")
-    ok = bool(result.get("ok"))
-
-    head = f"{tool}: {status}"
-    if duration is not None:
-        head += f" ({duration}ms)"
-    stream = sys.stdout if ok else sys.stderr
-    print(head, file=stream)
-
-    out = result.get("output")
-    if isinstance(out, dict) and out:
-        for k, v in out.items():
-            if v is None:
-                continue
-            print(f"  {k}: {v}", file=stream)
-
-    counts = result.get("counts")
-    if isinstance(counts, dict) and counts:
-        compact = {k: v for k, v in counts.items() if not isinstance(v, dict)}
-        if compact:
-            print(f"  counts: {compact}", file=stream)
-
-    duplicate = result.get("duplicate")
-    if isinstance(duplicate, dict) and duplicate:
-        sf = duplicate.get("source_file")
-        ulid = duplicate.get("ulid")
-        if sf or ulid:
-            print(f"  duplicate: {sf or ''} {ulid or ''}".strip(), file=stream)
-
-    failed_files = result.get("failed_files")
-    if isinstance(failed_files, list) and failed_files:
-        preview = failed_files[:5]
-        print(f"  failed_files: {len(failed_files)}", file=stream)
-        for f in preview:
-            print(f"    - {f}", file=stream)
-        if len(failed_files) > len(preview):
-            print("    - ...", file=stream)
-
-    if not ok:
-        err = result.get("error")
-        if isinstance(err, dict):
-            msg = err.get("message") or str(err)
-            et = err.get("type")
-            if et:
-                print(f"  error: {et}: {msg}", file=stream)
-            else:
-                print(f"  error: {msg}", file=stream)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Human-friendly wrapper around brain-graph tools")
-    action_group = parser.add_mutually_exclusive_group(required=True)
-    action_group.add_argument("--chunk", metavar="FILE", help="Run chunker on markdown file")
-    action_group.add_argument("--embed", metavar="FILE", help="Run embedder on markdown file")
-    action_group.add_argument("--taxonomy", metavar="FILE", help="Run taxonomy matcher on markdown file")
-    action_group.add_argument("--verify", metavar="FILE", help="Run LLM verifier on markdown file")
-    action_group.add_argument("--ner", metavar="FILE", help="Run NER extractor on markdown file")
-    action_group.add_argument("--summarize", metavar="FILE", help="Run summarizer on markdown file")
-    action_group.add_argument("--convert", action="store_true", help="Run document_converter batch conversion")
-    action_group.add_argument("--build-db", action="store_true", help="Run build_db")
-    action_group.add_argument("--taxonomy-convert", action="store_true", help="Run taxonomy_converter")
-    action_group.add_argument("--taxonomy-embed", action="store_true", help="Run taxonomy_embedder")
-    action_group.add_argument("--config-convert", action="store_true", help="Run config_converter")
-    action_group.add_argument("--check-duplicate", metavar="FILE", help="Run check_duplicate on a file")
-    action_group.add_argument("--process-all", action="store_true", help="Run process_all")
-    parser.add_argument("--json", action="store_true", help="Print tool JSON output (raw) and exit")
-    parser.add_argument("--pretty-json", action="store_true", help="Print tool JSON output (pretty) and exit")
-
-    args, passthrough = parser.parse_known_args()
-
-    action: str
-    file_arg: str | None
-
-    if args.chunk:
-        action, file_arg = "chunk", args.chunk
-    elif args.embed:
-        action, file_arg = "embed", args.embed
-    elif args.taxonomy:
-        action, file_arg = "taxonomy", args.taxonomy
-    elif args.verify:
-        action, file_arg = "verify", args.verify
-    elif args.ner:
-        action, file_arg = "ner", args.ner
-    elif args.summarize:
-        action, file_arg = "summarize", args.summarize
-    elif args.convert:
-        action, file_arg = "convert", None
-    elif args.build_db:
-        action, file_arg = "build-db", None
-    elif args.taxonomy_convert:
-        action, file_arg = "taxonomy-convert", None
-    elif args.taxonomy_embed:
-        action, file_arg = "taxonomy-embed", None
-    elif args.config_convert:
-        action, file_arg = "config-convert", None
-    elif args.check_duplicate:
-        action, file_arg = "check-duplicate", args.check_duplicate
-    elif args.process_all:
-        action, file_arg = "process-all", None
-    else:
-        parser.error("No action selected")
-        return 2
-
-    script, required_prefix = SCRIPT_MAP[action]
-    script_path = (REPO_ROOT / script).as_posix()
-
-    cmd = [_tool_python(), script_path]
-    if file_arg is not None:
-        cmd += [*required_prefix, file_arg]
-    cmd += passthrough
-    cmd += ["--format", "json"]
-
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
-    result, raw = _parse_json_maybe(proc.stdout)
-
-    if args.json:
-        print(raw)
-        return proc.returncode
-    if args.pretty_json:
-        if result is None:
-            print(json.dumps({"ok": proc.returncode == 0, "raw_stdout": proc.stdout}, ensure_ascii=False, indent=2))
-            return proc.returncode
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        if proc.returncode == 0 and result.get("ok") is False:
-            return 1
-        return proc.returncode
-
-    if result is None:
-        print(proc.stdout, end="")
-        return proc.returncode
-
-    _pretty_print_result(result)
-    if proc.returncode == 0 and result.get("ok") is False:
-        return 1
-    return proc.returncode
+        os.environ["BG_PYTHON"] = venv_python.as_posix()
 
 
 if __name__ == "__main__":
+    from brain_graph.cli.main import main
     raise SystemExit(main())

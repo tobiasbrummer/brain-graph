@@ -19,13 +19,13 @@ from typing import Any
 
 from openai import OpenAI
 
-from file_utils import (
+from brain_graph.utils.file_utils import (
     extract_ulid_from_md,
     get_output_paths,
     strip_ulid_lines,
     update_meta
 )
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:

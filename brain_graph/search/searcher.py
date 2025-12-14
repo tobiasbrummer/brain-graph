@@ -14,8 +14,8 @@ from pathlib import Path
 import duckdb
 from openai import OpenAI
 
-from cli_utils import emit_json, error_result, ms_since, ok_result
-from file_utils import load_config
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.file_utils import load_config
 
 
 def embed_query(query: str, config: dict) -> list[float]:
@@ -430,6 +430,8 @@ def print_results(results: list[dict], mode: str):
             print(f"   Similarity: {result['similarity']:.3f}")
         elif mode == "bm25":
             print(f"   BM25 Score: {result['bm25_score']:.3f}")
+        elif mode == "fuzzy":
+            print(f"   Fuzzy Score: {result['fuzzy_score']:.3f} (matched {result['matched_terms']} terms)")
         elif mode == "hybrid":
             print(
                 f"   Hybrid: {result['hybrid_score']:.3f} "
@@ -463,9 +465,19 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["semantic", "bm25", "hybrid"],
+        choices=["semantic", "bm25", "hybrid", "fuzzy"],
         default="hybrid",
         help="Search mode (default: hybrid)",
+    )
+    parser.add_argument(
+        "--fuzzy-only",
+        action="store_true",
+        help="Use fuzzy search only (shortcut for --mode fuzzy)",
+    )
+    parser.add_argument(
+        "--semantic-only",
+        action="store_true",
+        help="Use semantic search only (shortcut for --mode semantic)",
     )
     parser.add_argument(
         "--limit", type=int, default=10, help="Number of results (default: 10)"
@@ -594,19 +606,29 @@ def main():
         if con is None:
             raise RuntimeError("Database connection not available")
 
+        # Handle shortcut flags
+        mode = args.mode
+        if args.fuzzy_only:
+            mode = "fuzzy"
+        elif args.semantic_only:
+            mode = "semantic"
+
         query_embedding = None
-        if args.mode in ["semantic", "hybrid"]:
+        if mode in ["semantic", "hybrid"]:
             print("Embedding query...", file=sys.stderr)
             query_embedding = embed_query(args.query, config)
 
-        print(f"Searching with {args.mode} mode...", file=sys.stderr)
+        print(f"Searching with {mode} mode...", file=sys.stderr)
 
-        if args.mode == "semantic":
+        if mode == "semantic":
             results = semantic_search(con, query_embedding, args.limit)
             score_key = "similarity"
-        elif args.mode == "bm25":
+        elif mode == "bm25":
             results = bm25_search(con, args.query, args.limit)
             score_key = "bm25_score"
+        elif mode == "fuzzy":
+            results = fuzzy_search(con, args.query, args.limit)
+            score_key = "fuzzy_score"
         else:
             bm25_weight = 1.0 - args.semantic_weight
             results = hybrid_search(
@@ -626,7 +648,7 @@ def main():
                 ok_result(
                     "search",
                     query=args.query,
-                    mode=args.mode,
+                    mode=mode,
                     limit=args.limit,
                     score_key=score_key,
                     results=results,
@@ -636,7 +658,7 @@ def main():
                 pretty=args.pretty,
             )
         else:
-            print_results(results, args.mode)
+            print_results(results, mode)
         return 0
     except Exception as e:
         if args.format == "json":

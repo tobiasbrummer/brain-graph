@@ -24,10 +24,10 @@ from typing import Any
 import ulid
 import pysbd
 import xxhash
-import mq as markdown_query
+import mq as markdown_query  # External dependency
 from langdetect import detect, LangDetectException
 
-from file_utils import (
+from brain_graph.utils.file_utils import (
     get_or_generate_ulid,
     get_output_paths,
     ensure_output_dirs,
@@ -35,7 +35,7 @@ from file_utils import (
     get_source_hash,
     get_source_version
 )
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 # -----------------------------------------------------------------------------
 # Config

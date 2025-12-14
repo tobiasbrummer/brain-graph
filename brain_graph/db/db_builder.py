@@ -29,7 +29,7 @@ from typing import Any
 import duckdb
 import pyarrow.parquet as pq
 
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 def _sql_quote(value: str) -> str:
     """Escape a string for use as a single-quoted SQL literal."""

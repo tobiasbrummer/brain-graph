@@ -20,12 +20,12 @@ from typing import Any
 import numpy as np
 import pyarrow.parquet as pq
 
-from file_utils import (
+from brain_graph.utils.file_utils import (
     extract_ulid_from_md,
     get_output_paths,
     update_meta
 )
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def load_embeddings(parquet_path: Path) -> tuple[list[str], np.ndarray]:

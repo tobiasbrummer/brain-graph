@@ -21,14 +21,14 @@ from typing import Any
 
 import spacy
 
-from file_utils import (
+from brain_graph.utils.file_utils import (
     extract_ulid_from_md,
     generate_ulid,
     get_output_paths,
     strip_ulid_lines,
     update_meta
 )
-from cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 
 def detect_language(nodes: list[dict[str, Any]]) -> str:
