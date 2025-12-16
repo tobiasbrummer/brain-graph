@@ -77,59 +77,77 @@ class SearchDaemon:
 
         print("Building indexes...", file=sys.stderr)
 
-        # VSS index
+        # VSS extension + HNSW index
+        vss_loaded = False
         try:
             self.con.execute("LOAD vss;")
+            vss_loaded = True
         except duckdb.Error:
             try:
                 self.con.execute("INSTALL vss;")
                 self.con.execute("LOAD vss;")
+                vss_loaded = True
             except duckdb.Error as e:
                 print(
                     f"Warning: Could not load VSS extension ({e})", file=sys.stderr
                 )
 
-        self.con.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
-            ON chunk_embeddings_256d
-            USING HNSW (embedding)
-            WITH (metric = 'cosine')
-        """
-        )
+        if vss_loaded:
+            try:
+                self.con.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
+                    ON chunk_embeddings_256d
+                    USING HNSW (embedding)
+                    WITH (metric = 'cosine')
+                    """
+                )
+            except duckdb.Error as e:
+                print(
+                    f"Warning: Could not build HNSW index ({e})", file=sys.stderr
+                )
 
-        # FTS index
+        # FTS extension + index
+        fts_loaded = False
         try:
             self.con.execute("LOAD fts;")
+            fts_loaded = True
         except duckdb.Error:
             try:
                 self.con.execute("INSTALL fts;")
                 self.con.execute("LOAD fts;")
+                fts_loaded = True
             except duckdb.Error as e:
                 print(
                     f"Warning: Could not load FTS extension ({e})", file=sys.stderr
                 )
 
-        has_stopwords = (
-            self.con.execute(
-                "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
-            ).fetchone()[0]
-            > 0
-        )
-        stopwords_param = "german_stopwords" if has_stopwords else "none"
-        self.con.execute(
-            f"""
-            PRAGMA create_fts_index(
-                'nodes', 'id', 'text', 'summary', 'title', 'description',
-                stemmer='german',
-                stopwords='{stopwords_param}',
-                ignore='(\\.|[^a-zäöüß])+',
-                strip_accents=1,
-                lower=1,
-                overwrite=1
+        if fts_loaded:
+            has_stopwords = (
+                self.con.execute(
+                    "SELECT COUNT(*) FROM duckdb_tables() WHERE table_name='german_stopwords'"
+                ).fetchone()[0]
+                > 0
             )
-        """
-        )
+            stopwords_param = "german_stopwords" if has_stopwords else "none"
+            try:
+                self.con.execute(
+                    f"""
+                    PRAGMA create_fts_index(
+                        'nodes', 'id', 'text', 'summary', 'title', 'description',
+                        stemmer='german',
+                        stopwords='{stopwords_param}',
+                        ignore='(\\.|[^a-zäöüß])+',
+                        strip_accents=1,
+                        lower=1,
+                        overwrite=1
+                    )
+                    """
+                )
+            except duckdb.Error as e:
+                print(
+                    f"Warning: Could not build FTS index ({e})", file=sys.stderr
+                )
 
         elapsed = (time.perf_counter() - start) * 1000
         print(f"Database ready in {elapsed:.0f}ms", file=sys.stderr)

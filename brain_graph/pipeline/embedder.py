@@ -16,6 +16,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -24,8 +25,8 @@ from typing import Any
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-from openai import OpenAI
 
+from brain_graph.utils.embedding_client import embed_batch
 from brain_graph.utils.file_utils import (
     extract_ulid_from_md,
     get_output_paths,
@@ -45,8 +46,6 @@ def normalize_markdown(text: str) -> str:
     - ## Headings → Headings
     - Mehrfache Whitespace → einzelnes Space
     """
-    import re
-
     text = strip_ulid_lines(text)
 
     # Markdown-Links: [Text](URL) → Text
@@ -93,7 +92,7 @@ def extract_text_ranges(source_path: Path, nodes: list[dict[str, Any]], edges: l
     if edges:
         for edge in edges:
             if edge.get("type") == "contains":
-                chunk_to_section[edge["to"]] = edge["from"]
+                chunk_to_section[edge["to_id"]] = edge["from_id"]
 
     for node in nodes:
         # Nur chunk Nodes embedden - nicht code, nicht sections
@@ -166,27 +165,13 @@ def filter_oversized_texts(texts: list[str], chunk_ids: list[str], max_tokens: i
 
 
 def embed_texts(texts: list[str], config: dict[str, Any]) -> list[list[float]]:
-    """Embedded Texte via OpenAI-kompatible API."""
-    client = OpenAI(
-        base_url=config["embedding_base_url"],
-        api_key=config["embedding_api_key"],
-    )
+    """Embedded Texte via OpenAI-kompatible API (mit Batch-Support)."""
+    batch_size = config.get("embedding_batch_size", 32)
+    total_batches = (len(texts) - 1) // batch_size + 1
 
-    embeddings = []
-    batch_size = config["embedding_batch_size"]
+    print(f"Embedding {len(texts)} texts in {total_batches} batches...", file=sys.stderr)
 
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
-        print(f"Embedding batch {batch}, {i//batch_size + 1}/{(len(texts)-1)//batch_size + 1}...\n\n", file=sys.stderr)
-        response = client.embeddings.create(
-            input=batch,
-            model=config["embedding_model"],
-        )
-        # Sortiere nach Index, falls API sie unsortiert zurückgibt
-        batch_embeddings = sorted(response.data, key=lambda x: x.index)
-        embeddings.extend([e.embedding for e in batch_embeddings])
-
-    return embeddings
+    return embed_batch(texts, config)
 
 
 def save_parquet(

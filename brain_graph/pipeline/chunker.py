@@ -531,8 +531,8 @@ class Edge:
     
     def to_dict(self) -> dict:
         d = {
-            "from": self.from_id,
-            "to": self.to_id,
+            "from_id": self.from_id,
+            "to_id": self.to_id,
             "type": self.type,
         }
         if self.type == "next":

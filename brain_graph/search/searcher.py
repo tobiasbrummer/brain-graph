@@ -12,35 +12,24 @@ import time
 from pathlib import Path
 
 import duckdb
-from openai import OpenAI
 
 from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
+from brain_graph.utils.embedding_client import embed_single_cached
 from brain_graph.utils.file_utils import load_config
 
 
 def embed_query(query: str, config: dict) -> list[float]:
-    """Embed query text using the configured embedding model."""
-    client = OpenAI(
-        base_url=config["embedding_base_url"],
-        api_key=config["embedding_api_key"],
-    )
-
+    """Embed query text using the configured embedding model (cached)."""
     # Add query prefix for Jina v3 asymmetric search
     query_text = f"Query: {query}"
-
-    response = client.embeddings.create(
-        input=[query_text],
-        model=config["embedding_model"],
-    )
-
-    return response.data[0].embedding
+    return embed_single_cached(query_text, config)
 
 
 def semantic_search(
     con: duckdb.DuckDBPyConnection, query_embedding: list[float], limit: int = 10
 ) -> list[dict]:
     """
-    Semantic search using 256d embeddings.
+    Semantic search using 256d embeddings with HNSW index.
 
     Args:
         con: DuckDB connection
@@ -53,21 +42,22 @@ def semantic_search(
     # Truncate to 256d
     query_emb_256d = query_embedding[:256]
 
+    # Use array_cosine_distance for HNSW index utilization (metric='cosine')
+    # ORDER BY distance ASC + LIMIT triggers HNSW index scan
     results = con.execute(
         """
         SELECT
-            n.id,
+            e.chunk_id,
             n.text,
             n.summary,
             n.source_file,
-            array_cosine_similarity(e.embedding, ?::DOUBLE[256]) as similarity
+            1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256]) as similarity
         FROM chunk_embeddings_256d e
         JOIN nodes n ON e.chunk_id = n.id
-        WHERE n.type = 'chunk'
-        ORDER BY similarity DESC
+        ORDER BY array_cosine_distance(e.embedding, ?::FLOAT[256]) ASC
         LIMIT ?
     """,
-        [query_emb_256d, limit],
+        [query_emb_256d, query_emb_256d, limit],
     ).fetchall()
 
     return [
@@ -135,6 +125,9 @@ def hybrid_search(
     """
     Hybrid search combining semantic and BM25.
 
+    Uses Top-K merge strategy: fetch top candidates from both search methods,
+    then merge and re-rank. Much faster than FULL OUTER JOIN over all chunks.
+
     Args:
         con: DuckDB connection
         query: Query text
@@ -149,20 +142,25 @@ def hybrid_search(
     # Truncate to 256d
     query_emb_256d = query_embedding[:256]
 
+    # Fetch more candidates than final limit for better coverage
+    candidate_limit = min(limit * 5, 100)
+
+    # Top-K semantic results using HNSW index
     results = con.execute(
         """
-        WITH semantic_results AS (
+        WITH semantic_topk AS (
             SELECT
-                n.id,
+                e.chunk_id as id,
                 n.text,
                 n.summary,
                 n.source_file,
-                array_cosine_similarity(e.embedding, ?::DOUBLE[256]) as sem_score
+                1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256]) as sem_score
             FROM chunk_embeddings_256d e
             JOIN nodes n ON e.chunk_id = n.id
-            WHERE n.type = 'chunk'
+            ORDER BY array_cosine_distance(e.embedding, ?::FLOAT[256]) ASC
+            LIMIT ?
         ),
-        bm25_results AS (
+        bm25_topk AS (
             SELECT
                 id,
                 text,
@@ -171,31 +169,46 @@ def hybrid_search(
                 fts_main_nodes.match_bm25(id, ?) as bm25_score
             FROM nodes
             WHERE fts_main_nodes.match_bm25(id, ?) IS NOT NULL
+            ORDER BY bm25_score DESC
+            LIMIT ?
+        ),
+        merged AS (
+            SELECT id, text, summary, source_file, sem_score, 0.0 as bm25_score
+            FROM semantic_topk
+            UNION ALL
+            SELECT id, text, summary, source_file, 0.0 as sem_score, bm25_score
+            FROM bm25_topk
         )
         SELECT
-            COALESCE(s.id, b.id) as id,
-            COALESCE(s.text, b.text) as text,
-            COALESCE(s.summary, b.summary) as summary,
-            COALESCE(s.source_file, b.source_file) as source_file,
-            COALESCE(s.sem_score, 0) as sem_score,
-            COALESCE(b.bm25_score, 0) as bm25_score
-        FROM semantic_results s
-        FULL OUTER JOIN bm25_results b ON s.id = b.id
+            id,
+            MAX(text) as text,
+            MAX(summary) as summary,
+            MAX(source_file) as source_file,
+            MAX(sem_score) as sem_score,
+            MAX(bm25_score) as bm25_score
+        FROM merged
+        GROUP BY id
     """,
-        [query_emb_256d, query, query],
+        [
+            query_emb_256d,
+            query_emb_256d,
+            candidate_limit,
+            query,
+            query,
+            candidate_limit,
+        ],
     ).fetchall()
-
     if not results:
         return []
 
     # Normalize and combine scores
-    max_sem = max(r[4] for r in results) or 1.0
-    max_bm25 = max(r[5] for r in results) or 1.0
+    max_sem = max((r[4] for r in results), default=1.0) or 1.0
+    max_bm25 = max((r[5] for r in results), default=1.0) or 1.0
 
     combined = []
     for chunk_id, text, summary, source_file, sem, bm25 in results:
-        sem_norm = sem / max_sem
-        bm25_norm = bm25 / max_bm25
+        sem_norm = sem / max_sem if sem else 0.0
+        bm25_norm = bm25 / max_bm25 if bm25 else 0.0
         hybrid = sem_norm * semantic_weight + bm25_norm * bm25_weight
 
         combined.append(
@@ -221,8 +234,9 @@ def fuzzy_search(
     """
     Fuzzy search using Levenshtein distance (edit distance).
 
-    Finds chunks where text contains words similar to query terms.
-    Good for handling typos and spelling variations.
+    Uses a two-phase approach for performance:
+    1. Pre-filter candidates using LIKE patterns (fast)
+    2. Apply editdist3 only on promising candidates
 
     Args:
         con: DuckDB connection
@@ -234,35 +248,54 @@ def fuzzy_search(
         List of dicts with chunk_id, text, summary, fuzzy_score
     """
     # Split query into terms
-    query_terms = query.lower().split()
+    query_terms = [t for t in query.lower().split() if len(t) >= 3]
 
     if not query_terms:
         return []
 
-    # Build fuzzy search query
-    # For each query term, find chunks with similar words
+    # Build LIKE patterns for pre-filtering (much faster than editdist on all rows)
+    # For each term, create pattern that matches prefix/suffix variations
+    like_conditions = []
+    for term in query_terms:
+        # Match words starting or containing the term (handles typos at end)
+        like_conditions.append(f"lower(n.text) LIKE '%{term[:3]}%'")
+
+    like_filter = " OR ".join(like_conditions)
+
+    # Limit pre-filter candidates
+    candidate_limit = min(limit * 10, 500)
+
+    # Two-phase fuzzy search: pre-filter then editdist
     results = con.execute(
-        """
-        WITH query_terms AS (
+        f"""
+        WITH candidates AS (
+            SELECT id, text, summary, source_file
+            FROM nodes n
+            WHERE n.type = 'chunk'
+              AND ({like_filter})
+            LIMIT {candidate_limit}
+        ),
+        query_terms AS (
             SELECT UNNEST(?::VARCHAR[]) as term
         ),
         word_matches AS (
             SELECT
-                n.id,
-                n.text,
-                n.summary,
-                n.source_file,
+                c.id,
+                c.text,
+                c.summary,
+                c.source_file,
                 qt.term as query_term,
                 word.word as matched_word,
                 editdist3(qt.term, word.word) as distance
-            FROM nodes n,
+            FROM candidates c,
                  LATERAL (
-                     SELECT UNNEST(string_split(lower(n.text), ' ')) as word
+                     SELECT UNNEST(
+                         regexp_split_to_array(lower(c.text), '[^a-zäöüß]+')
+                     ) as word
                  ) word,
                  query_terms qt
-            WHERE n.type = 'chunk'
+            WHERE length(word.word) >= 3
               AND editdist3(qt.term, word.word) <= ?
-              AND length(word.word) >= 3
         ),
         scored_chunks AS (
             SELECT
@@ -413,7 +446,16 @@ def deduplicate_by_document(results: list[dict], score_key: str) -> list[dict]:
 
 
 def print_results(results: list[dict], mode: str):
-    """Print search results in a readable format."""
+    """
+    Print search results in a human-readable format.
+
+    Displays chunk ID, source file, relevance scores (varies by mode),
+    summary, and text preview for each result.
+
+    Args:
+        results: Search results from semantic_search, bm25_search, etc.
+        mode: Search mode (semantic, bm25, fuzzy, hybrid) for score display
+    """
     if not results:
         print("No results found.")
         return
@@ -431,7 +473,9 @@ def print_results(results: list[dict], mode: str):
         elif mode == "bm25":
             print(f"   BM25 Score: {result['bm25_score']:.3f}")
         elif mode == "fuzzy":
-            print(f"   Fuzzy Score: {result['fuzzy_score']:.3f} (matched {result['matched_terms']} terms)")
+            print(
+                f"   Fuzzy Score: {result['fuzzy_score']:.3f} (matched {result['matched_terms']} terms)"
+            )
         elif mode == "hybrid":
             print(
                 f"   Hybrid: {result['hybrid_score']:.3f} "
@@ -500,8 +544,12 @@ def main():
         default="json",
         help="Output format (default: json)",
     )
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
-    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON output"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Include traceback in JSON error output"
+    )
     args = parser.parse_args()
 
     con: duckdb.DuckDBPyConnection | None = None
@@ -515,7 +563,10 @@ def main():
                 con.execute(f"INSTALL {ext};")
                 con.execute(f"LOAD {ext};")
             except duckdb.Error as e:
-                print(f"Warning: Could not load DuckDB extension '{ext}' ({e})", file=sys.stderr)
+                print(
+                    f"Warning: Could not load DuckDB extension '{ext}' ({e})",
+                    file=sys.stderr,
+                )
 
     try:
         # Check if DB exists, otherwise build from documents directory
@@ -525,7 +576,10 @@ def main():
 
         if not db_path.exists():
             if documents_dir.exists() and any(documents_dir.rglob("*.document.json")):
-                print(f"Database not found, building in-memory DB from {documents_dir}...", file=sys.stderr)
+                print(
+                    f"Database not found, building in-memory DB from {documents_dir}...",
+                    file=sys.stderr,
+                )
                 from brain_graph.db.db_builder import BrainGraphDB
 
                 db = BrainGraphDB(":memory:")
@@ -563,7 +617,9 @@ def main():
                 ).fetchone()[0]
                 if exists:
                     print(f"  Loading table: {table_name}", file=sys.stderr)
-                    con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}")
+                    con.execute(
+                        f"CREATE TABLE {table_name} AS SELECT * FROM disk_db.{table_name}"
+                    )
 
             con.execute("DETACH disk_db")
 
@@ -580,7 +636,10 @@ def main():
                     """
                 )
             except duckdb.Error as e:
-                print(f"Warning: Could not build HNSW index, skipping ({e})", file=sys.stderr)
+                print(
+                    f"Warning: Could not build HNSW index, skipping ({e})",
+                    file=sys.stderr,
+                )
 
             _load_extension_safe("fts")
 
@@ -606,7 +665,10 @@ def main():
                     """
                 )
             except duckdb.Error as e:
-                print(f"Warning: Could not build FTS index, skipping ({e})", file=sys.stderr)
+                print(
+                    f"Warning: Could not build FTS index, skipping ({e})",
+                    file=sys.stderr,
+                )
 
             print("Database ready (indexes built)", file=sys.stderr)
 
@@ -669,7 +731,15 @@ def main():
         return 0
     except Exception as e:
         if args.format == "json":
-            emit_json(error_result("search", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            emit_json(
+                error_result(
+                    "search",
+                    e,
+                    include_traceback=args.debug,
+                    duration_ms=ms_since(start),
+                ),
+                pretty=args.pretty,
+            )
             return 1
         raise
     finally:

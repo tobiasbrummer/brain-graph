@@ -694,8 +694,6 @@ class BrainGraphDB:
         """Build all indexes after data import."""
         print("\nBuilding indexes...", file=sys.stderr)
 
-        import time
-
         # Get chunk count for progress estimation
         chunk_count = self.con.execute(
             "SELECT COUNT(*) FROM chunk_embeddings_256d"
@@ -703,7 +701,7 @@ class BrainGraphDB:
         print(f"  VSS indexes (HNSW) for {chunk_count} chunks...", file=sys.stderr)
 
         # HNSW parameters:
-        # - Default metric is l2sq (faster than cosine, similar results for normalized embeddings)
+        # - metric='cosine' for normalized embeddings (consistent with searcher.py)
         # - M: connections per layer (16 default)
         # - ef_construction: search depth during build (128 default)
         start = time.time()
@@ -713,6 +711,7 @@ class BrainGraphDB:
                 CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_hnsw
                 ON chunk_embeddings_256d
                 USING HNSW (embedding)
+                WITH (metric = 'cosine')
                 """
             )
             elapsed = time.time() - start
@@ -729,6 +728,7 @@ class BrainGraphDB:
                 CREATE INDEX IF NOT EXISTS idx_taxonomy_embeddings_hnsw
                 ON taxonomy_embeddings_256d
                 USING HNSW (embedding)
+                WITH (metric = 'cosine')
                 """
             )
         except duckdb.Error as e:
