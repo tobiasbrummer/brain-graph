@@ -32,6 +32,17 @@ import xxhash
 import mq as markdown_query  # External dependency
 from langdetect import detect, LangDetectException
 
+# Tree-sitter imports for code parsing
+try:
+    from tree_sitter import Language, Parser, Node as TSNode
+    import tree_sitter_python
+    import tree_sitter_javascript
+    import tree_sitter_typescript
+    TREE_SITTER_AVAILABLE = True
+except ImportError:
+    TREE_SITTER_AVAILABLE = False
+    print("Warning: tree-sitter not available. Code parsing will be limited.", file=sys.stderr)
+
 from brain_graph.utils.file_utils import (
     get_or_generate_ulid,
     get_output_paths,
@@ -135,10 +146,211 @@ class Marker:
     language: str = ""
 
 
+@dataclass
+class CodeUnit:
+    """Eine semantische Code-Einheit (Funktion, Klasse, Methode) aus Tree-sitter Parsing."""
+    type: str  # "function", "class", "method"
+    name: str
+    signature: str
+    docstring: str
+    language: str
+    char_start: int  # Relative zum Code-Block
+    char_end: int
+    parent_class: str | None = None  # Für Methoden
+    parameters: list[dict[str, Any]] = field(default_factory=list)
+    return_type: str | None = None
+    decorators: list[str] = field(default_factory=list)
+
+
+# -----------------------------------------------------------------------------
+# Tree-sitter Code Parsing
+# -----------------------------------------------------------------------------
+
+# Parser cache
+_PARSERS: dict[str, Parser] = {}
+
+
+def get_parser(language: str) -> Parser | None:
+    """
+    Get or create cached Tree-sitter parser for language.
+
+    Returns:
+        Parser instance or None if language not supported
+    """
+    if not TREE_SITTER_AVAILABLE:
+        return None
+
+    if language in _PARSERS:
+        return _PARSERS[language]
+
+    try:
+        parser = Parser()
+        if language == "python":
+            parser.set_language(Language(tree_sitter_python.language()))
+        elif language in ["javascript", "js"]:
+            parser.set_language(Language(tree_sitter_javascript.language()))
+        elif language in ["typescript", "ts"]:
+            parser.set_language(Language(tree_sitter_typescript.language_typescript()))
+        else:
+            return None
+
+        _PARSERS[language] = parser
+        return parser
+    except Exception as e:
+        print(f"Warning: Could not create parser for {language}: {e}", file=sys.stderr)
+        return None
+
+
+def extract_docstring(node: TSNode, code_bytes: bytes) -> str:
+    """Extract docstring from function/class node."""
+    # Python: First statement is string_literal
+    if node.type in ["function_definition", "class_definition"]:
+        for child in node.children:
+            if child.type == "block":
+                for stmt in child.children:
+                    if stmt.type == "expression_statement":
+                        for expr_child in stmt.children:
+                            if expr_child.type == "string":
+                                doc = code_bytes[expr_child.start_byte:expr_child.end_byte].decode("utf-8")
+                                # Strip quotes
+                                doc = doc.strip().strip('"""').strip("'''").strip('"').strip("'")
+                                return doc
+    return ""
+
+
+def extract_signature(node: TSNode, code_bytes: bytes) -> str:
+    """Extract full signature from function/class definition."""
+    # Find the line containing the def/class keyword
+    for child in node.children:
+        if child.type in ["def", "class", "identifier", "parameters", "type"]:
+            continue
+        # Get first line (signature)
+        sig_bytes = code_bytes[node.start_byte:node.end_byte]
+        lines = sig_bytes.decode("utf-8").split("\n")
+        if lines:
+            return lines[0].strip()
+
+    # Fallback: extract def/class line
+    sig_bytes = code_bytes[node.start_byte:node.end_byte]
+    lines = sig_bytes.decode("utf-8").split("\n")
+    return lines[0].strip() if lines else ""
+
+
+def parse_code_with_treesitter(code: str, language: str) -> list[CodeUnit]:
+    """
+    Parse code block with Tree-sitter to extract functions/classes.
+
+    Args:
+        code: Code block content
+        language: Programming language
+
+    Returns:
+        List of CodeUnit objects
+    """
+    parser = get_parser(language)
+    if not parser:
+        return []
+
+    code_bytes = code.encode("utf-8")
+    tree = parser.parse(code_bytes)
+
+    units: list[CodeUnit] = []
+
+    def visit_node(node: TSNode, parent_class: str | None = None):
+        """Recursively visit AST nodes to extract code units."""
+
+        # Python function
+        if node.type == "function_definition":
+            name = ""
+            for child in node.children:
+                if child.type == "identifier":
+                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    break
+
+            if name:
+                signature = extract_signature(node, code_bytes)
+                docstring = extract_docstring(node, code_bytes)
+
+                unit_type = "method" if parent_class else "function"
+
+                units.append(CodeUnit(
+                    type=unit_type,
+                    name=name,
+                    signature=signature,
+                    docstring=docstring,
+                    language=language,
+                    char_start=node.start_byte,
+                    char_end=node.end_byte,
+                    parent_class=parent_class,
+                ))
+
+        # Python class
+        elif node.type == "class_definition":
+            name = ""
+            for child in node.children:
+                if child.type == "identifier":
+                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    break
+
+            if name:
+                signature = extract_signature(node, code_bytes)
+                docstring = extract_docstring(node, code_bytes)
+
+                units.append(CodeUnit(
+                    type="class",
+                    name=name,
+                    signature=signature,
+                    docstring=docstring,
+                    language=language,
+                    char_start=node.start_byte,
+                    char_end=node.end_byte,
+                ))
+
+                # Visit methods inside class
+                for child in node.children:
+                    if child.type == "block":
+                        for stmt in child.children:
+                            visit_node(stmt, parent_class=name)
+
+        # JavaScript/TypeScript function
+        elif node.type in ["function_declaration", "method_definition", "arrow_function"]:
+            name = ""
+            for child in node.children:
+                if child.type in ["identifier", "property_identifier"]:
+                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    break
+
+            if name or node.type == "arrow_function":
+                if not name:
+                    name = "<anonymous>"
+
+                signature = code_bytes[node.start_byte:node.end_byte].decode("utf-8").split("\n")[0]
+
+                units.append(CodeUnit(
+                    type="function" if node.type != "method_definition" else "method",
+                    name=name,
+                    signature=signature,
+                    docstring="",
+                    language=language,
+                    char_start=node.start_byte,
+                    char_end=node.end_byte,
+                    parent_class=parent_class,
+                ))
+
+        # Recurse into children
+        for child in node.children:
+            visit_node(child, parent_class)
+
+    # Start traversal from root
+    visit_node(tree.root_node)
+
+    return units
+
+
 def parse_markdown(text: str) -> list[Block]:
     """
     Parst Markdown in Blöcke.
-    
+
     Strategie:
     1. Headings und Code-Blöcke als Marker mit Position extrahieren
     2. Nach Position sortieren
@@ -495,14 +707,16 @@ SKIP_SECTIONS = {
 class Node:
     id: str
     ulid: str
-    type: str  # "section", "chunk", "code"
+    type: str  # "section", "chunk", "code", "function", "class", "method"
     content: str
     title: str = ""
     level: int = 0
     language: str = ""
     char_start: int = 0
     char_end: int = 0
-    
+    signature: str = ""  # For code units
+    docstring: str = ""  # For code units
+
     def to_dict(self) -> dict:
         d = {
             "id": self.id,
@@ -513,11 +727,17 @@ class Node:
             d["title"] = self.title
         if self.type == "section":
             d["level"] = self.level
-        if self.type in ("chunk", "code") and self.language:
+        if self.type in ("chunk", "code", "function", "class", "method") and self.language:
             d["language"] = self.language
-        if self.type in ("chunk", "code"):
+        if self.type in ("chunk", "code", "function", "class", "method"):
             d["char_start"] = self.char_start
             d["char_end"] = self.char_end
+        if self.type in ("function", "class", "method"):
+            if self.signature:
+                d["signature"] = self.signature
+            if self.docstring:
+                d["docstring"] = self.docstring
+            d["name"] = self.title  # title contains the name for code units
         return d
 
 
@@ -632,36 +852,116 @@ def build_graph(
             if skip_until_level is not None:
                 continue
 
-            # Code Node (atomar)
-            node_id = make_id("code", f"{source_file}:{block.char_start}:{block.content[:50]}")
-            node = Node(
-                id=node_id,
-                ulid=make_ulid(node_id, ts_bytes=ts_bytes),
-                type="code",
-                content=block.content,
-                language=block.language,
-                char_start=block.char_start,
-                char_end=block.char_end,
-            )
-            nodes.append(node)
+            # Parse Code-Block mit Tree-sitter
+            code_units = parse_code_with_treesitter(block.content, block.language)
 
-            # Contains-Edge von aktueller Section
-            if current_section:
-                edges.append(Edge(
-                    from_id=current_section.id,
-                    to_id=node.id,
-                    type="contains",
-                    weight=8,
-                ))
+            if code_units:
+                # Tree-sitter erfolgreich: Erstelle Nodes für Funktionen/Klassen
+                class_nodes = {}  # name -> node (für defines-Edges)
+                function_names = {unit.name for unit in code_units if unit.type == "function"}
 
-            # Next-Edge vom vorherigen Chunk
-            if prev_chunk:
-                edges.append(Edge(
-                    from_id=prev_chunk.id,
-                    to_id=node.id,
-                    type="next",
-                ))
-            prev_chunk = node
+                for unit in code_units:
+                    # Node ID basierend auf Typ und Name
+                    node_id = make_id(
+                        unit.type,
+                        f"{source_file}:{block.char_start}:{unit.name}"
+                    )
+
+                    node = Node(
+                        id=node_id,
+                        ulid=make_ulid(node_id, ts_bytes=ts_bytes),
+                        type=unit.type,
+                        content=block.content[unit.char_start:unit.char_end],
+                        title=unit.name,
+                        signature=unit.signature,
+                        docstring=unit.docstring,
+                        language=block.language,
+                        char_start=block.char_start + unit.char_start,
+                        char_end=block.char_start + unit.char_end,
+                    )
+                    nodes.append(node)
+
+                    # Track classes for defines-edges
+                    if unit.type == "class":
+                        class_nodes[unit.name] = node
+
+                    # Contains-Edge von aktueller Section
+                    if current_section:
+                        edges.append(Edge(
+                            from_id=current_section.id,
+                            to_id=node.id,
+                            type="contains",
+                            weight=8,
+                        ))
+
+                    # Defines-Edge: Class → Method
+                    if unit.type == "method" and unit.parent_class:
+                        if unit.parent_class in class_nodes:
+                            edges.append(Edge(
+                                from_id=class_nodes[unit.parent_class].id,
+                                to_id=node.id,
+                                type="defines",
+                                weight=10,
+                            ))
+
+                    # Next-Edge vom vorherigen Chunk
+                    if prev_chunk:
+                        edges.append(Edge(
+                            from_id=prev_chunk.id,
+                            to_id=node.id,
+                            type="next",
+                        ))
+                    prev_chunk = node
+
+                # Optional: Calls-Edges (einfache Heuristik basierend auf Namen)
+                # Für jede Funktion: Suche Funktionsaufrufe im Code
+                for unit in code_units:
+                    if unit.type in ["function", "method"]:
+                        code_text = block.content[unit.char_start:unit.char_end]
+                        for func_name in function_names:
+                            if func_name != unit.name and func_name in code_text:
+                                # Finde Target-Node
+                                target_nodes = [n for n in nodes if n.title == func_name and n.type in ["function", "method"]]
+                                for target in target_nodes:
+                                    edges.append(Edge(
+                                        from_id=next(n for n in nodes if n.title == unit.name and n.type == unit.type).id,
+                                        to_id=target.id,
+                                        type="calls",
+                                        weight=5,
+                                    ))
+                                    break
+
+            else:
+                # Fallback: Atomarer Code-Block (Tree-sitter nicht verfügbar oder parsing fehlgeschlagen)
+                node_id = make_id("code", f"{source_file}:{block.char_start}:{block.content[:50]}")
+                node = Node(
+                    id=node_id,
+                    ulid=make_ulid(node_id, ts_bytes=ts_bytes),
+                    type="code",
+                    content=block.content,
+                    language=block.language,
+                    char_start=block.char_start,
+                    char_end=block.char_end,
+                )
+                nodes.append(node)
+
+                # Contains-Edge von aktueller Section
+                if current_section:
+                    edges.append(Edge(
+                        from_id=current_section.id,
+                        to_id=node.id,
+                        type="contains",
+                        weight=8,
+                    ))
+
+                # Next-Edge vom vorherigen Chunk
+                if prev_chunk:
+                    edges.append(Edge(
+                        from_id=prev_chunk.id,
+                        to_id=node.id,
+                        type="next",
+                    ))
+                prev_chunk = node
 
         elif block.type == "text":
             # Skip wenn in übersprungener Section

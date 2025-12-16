@@ -23,9 +23,13 @@
         "similar",
         "mentions",
         "related",
-        "categorized_as"
+        "categorized_as",
+        "calls",
+        "defines",
+        "imports",
+        "inherits"
       ],
-      "description": "Edge type (parent_of, contains, next from chunker; categorized_as from taxonomy)"
+      "description": "Edge type (parent_of, contains, next from chunker; calls, defines for code; categorized_as from taxonomy)"
     },
     "weight": {
       "type": ["number", "null"],

@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pkms.local/schemas/code.schema.json",
+  "title": "Code",
+  "description": "Code unit (function, class, or method) extracted via Tree-sitter",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(func_[a-f0-9]{8,12}|class_[a-f0-9]{8,12}|method_[a-f0-9]{8,12}|[0-9A-HJKMNP-TV-Z]{26})$",
+      "description": "Code unit ID (short: func_/class_/method_<hash> or ULID)"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID for this code node"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["function", "class", "method"],
+      "description": "Type of code unit"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Function/class/method name"
+    },
+    "signature": {
+      "type": "string",
+      "description": "Full signature (e.g., 'def foo(x: int) -> str' or 'class Bar(Base)')"
+    },
+    "docstring": {
+      "type": ["string", "null"],
+      "description": "Docstring or documentation comment"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["python", "javascript", "typescript", "java", "rust", "go", "cpp", "c", "ruby", "php"],
+      "description": "Programming language"
+    },
+    "char_start": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Character offset where code unit starts in source file"
+    },
+    "char_end": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Character offset where code unit ends in source file"
+    },
+    "parent_class": {
+      "type": ["string", "null"],
+      "description": "Parent class name (for methods only)"
+    },
+    "complexity": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Cyclomatic complexity (optional)"
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": ["string", "null"]
+          },
+          "default": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["name"]
+      },
+      "description": "Function/method parameters (optional detailed parsing)"
+    },
+    "return_type": {
+      "type": ["string", "null"],
+      "description": "Return type annotation (if available)"
+    },
+    "decorators": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Decorators/annotations (e.g., @staticmethod, @Override)"
+    }
+  },
+  "required": ["id", "ulid", "type", "name", "signature", "language", "char_start", "char_end"],
+  "additionalProperties": false
+}

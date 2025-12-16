@@ -12,7 +12,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 PIPELINE_TOOLS = {
     "chunk": ("brain_graph/pipeline/chunker.py", "Chunk markdown file into semantic sections"),
-    "embed": ("brain_graph/pipeline/embedder.py", "Generate embeddings for chunks"),
+    "embed": ("brain_graph/pipeline/embedder.py", "Generate embeddings for text chunks"),
+    "code-embed": ("brain_graph/pipeline/code_embedder.py", "Generate embeddings for code units (functions/classes/methods)"),
     "taxonomy-embed": ("brain_graph/pipeline/taxonomy_embedder.py", "Generate embeddings for taxonomy categories"),
     "taxonomy": ("brain_graph/pipeline/taxonomy_matcher.py", "Match content to taxonomy categories"),
     "verify": ("brain_graph/pipeline/llm_verifier.py", "Verify content with LLM"),
