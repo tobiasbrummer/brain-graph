@@ -16,8 +16,7 @@ dist/
 *.log
 .claude/
 PoC/
-tests/data
+brain_graph/tests/data/
 vault/
 .brain_graph/data/
-.brain_graph/*.duckdb
-!.brain_graph/brain.duckdb
+.pytest_cache/
