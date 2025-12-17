@@ -12,9 +12,9 @@ Configuration for embedding, chunking, and summarization.
 
 ## Code Embedding
 
-+base_url:<http://localhost:8200/v1>
-+model:jina-embeddings-v3-Q8_0
-+dim:1024
++base_url:<http://localhost:8201/v1>
++model:jina-embeddings-v2-base-code-q8_0
++dim:768
 +api_key:unused
 +batch_size:16
 

@@ -30,9 +30,9 @@ services:
   # ---------------------------------------------------------
   # Service 2: Jina Embeddings v3
   # ---------------------------------------------------------
-  embed-server:
+  text-embed-server:
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
-    container_name: llama-cpp-embed
+    container_name: llama-cpp-embed-text
     restart: unless-stopped
     devices:
       - /dev/dri:/dev/dri
@@ -74,4 +74,29 @@ services:
       -np 8
       -ngl 99
       -ub 8192
+      --timeout 30
+
+
+  # ---------------------------------------------------------
+  # Service 4: Jina Embeddings v2 Base Code
+  # ---------------------------------------------------------
+  code-embed-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llama-cpp-embed-code
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /var/home/t0bybr/huggingface/models:/models:z    # Hier liegen deine .gguf Dateien
+    environment:
+      - GGML_VULKAN_DEVICE=0
+    ports:
+      - 8201:8080
+    command: >
+      -m /models/jina-embeddings-v2-base-code-q8_0.gguf
+      --embedding          
+      -c 8192              
+      -ngl 99              
+      -ub 8192
+      --pooling mean       
       --timeout 30
