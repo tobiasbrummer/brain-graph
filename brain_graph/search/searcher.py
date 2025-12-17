@@ -72,6 +72,73 @@ def semantic_search(
     ]
 
 
+def code_search(
+    con: duckdb.DuckDBPyConnection,
+    query_embedding: list[float],
+    limit: int = 10,
+    languages: list[str] | None = None,
+) -> list[dict]:
+    """
+    Semantic code search using code embeddings.
+
+    Searches functions, classes, and methods using their embeddings.
+    Optionally filters by programming language.
+
+    Args:
+        con: DuckDB connection
+        query_embedding: Query embedding (full dimension, will be truncated to 256d)
+        limit: Number of results to return
+        languages: Optional list of languages to filter (e.g., ["python", "javascript"])
+
+    Returns:
+        List of results with code_id, name, signature, docstring, similarity, language
+    """
+    # Truncate to 256d
+    query_emb_256d = query_embedding[:256]
+
+    # Language filter
+    lang_filter = ""
+    if languages:
+        lang_list = "', '".join(languages)
+        lang_filter = f"AND e.language IN ('{lang_list}')"
+
+    # Use array_cosine_distance for HNSW index utilization (metric='cosine')
+    results = con.execute(
+        f"""
+        SELECT
+            e.code_id,
+            n.title as name,
+            n.signature,
+            n.docstring,
+            n.content as text,
+            n.source_file,
+            e.language,
+            1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256]) as similarity
+        FROM code_embeddings_256d e
+        JOIN nodes n ON e.code_id = n.id
+        WHERE n.type IN ('function', 'class', 'method')
+          {lang_filter}
+        ORDER BY array_cosine_distance(e.embedding, ?::FLOAT[256]) ASC
+        LIMIT ?
+    """,
+        [query_emb_256d, query_emb_256d, limit],
+    ).fetchall()
+
+    return [
+        {
+            "code_id": code_id,
+            "name": name,
+            "signature": signature or "",
+            "docstring": docstring or "",
+            "text": text,
+            "source_file": source_file,
+            "language": language,
+            "similarity": similarity,
+        }
+        for code_id, name, signature, docstring, text, source_file, language, similarity in results
+    ]
+
+
 def bm25_search(
     con: duckdb.DuckDBPyConnection, query: str, limit: int = 10
 ) -> list[dict]:
@@ -509,7 +576,7 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["semantic", "bm25", "hybrid", "fuzzy"],
+        choices=["semantic", "bm25", "hybrid", "fuzzy", "code"],
         default="hybrid",
         help="Search mode (default: hybrid)",
     )
@@ -525,6 +592,10 @@ def main():
     )
     parser.add_argument(
         "--limit", type=int, default=10, help="Number of results (default: 10)"
+    )
+    parser.add_argument(
+        "--languages",
+        help="Comma-separated list of languages for code search (e.g., python,javascript)",
     )
     parser.add_argument(
         "--semantic-weight",
@@ -605,6 +676,7 @@ def main():
                 "nodes",
                 "edges",
                 "chunk_embeddings_256d",
+                "code_embeddings_256d",
                 "taxonomy_embeddings_256d",
                 "embedding_sources",
                 "meta",
@@ -683,7 +755,7 @@ def main():
             mode = "semantic"
 
         query_embedding = None
-        if mode in ["semantic", "hybrid"]:
+        if mode in ["semantic", "hybrid", "code"]:
             print("Embedding query...", file=sys.stderr)
             query_embedding = embed_query(args.query, config)
 
@@ -698,6 +770,10 @@ def main():
         elif mode == "fuzzy":
             results = fuzzy_search(con, args.query, args.limit)
             score_key = "fuzzy_score"
+        elif mode == "code":
+            languages = args.languages.split(",") if args.languages else None
+            results = code_search(con, query_embedding, args.limit, languages)
+            score_key = "similarity"
         else:
             bm25_weight = 1.0 - args.semantic_weight
             results = hybrid_search(
