@@ -208,7 +208,7 @@ class BrainGraphDB:
         """
         )
 
-    def import_directory_fast(
+    def import_directory(
         self,
         data_dir: Path,
         documents_dir: Path | None = None,
@@ -1001,7 +1001,7 @@ def main():
         print(f"Embedding dimension: {args.embedding_dim}", file=sys.stderr)
 
         db = BrainGraphDB(db_path)
-        db.import_directory_fast(
+        db.import_directory(
             args.data_dir,
             documents_dir=args.documents_dir,
             target_dim=args.embedding_dim,
@@ -1063,7 +1063,7 @@ def main():
             )
             print("  db = BrainGraphDB(':memory:')", file=sys.stderr)
             print(
-                "  db.import_directory_fast(Path('.brain_graph/data'))", file=sys.stderr
+                "  db.import_directory(Path('.brain_graph/data'))", file=sys.stderr
             )
             print("  db.build_indexes()", file=sys.stderr)
         return 0
