@@ -20,7 +20,10 @@
       "description": "Relative path to file in vault"
     },
     "original_source": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Original source path if file was moved from inbox"
     },
     "title": {
@@ -32,12 +35,53 @@
       "type": "string",
       "pattern": "^[a-z]{2}$",
       "description": "ISO 639-1 language code (auto-detected)",
-      "examples": ["de", "en", "fr"]
+      "examples": [
+        "de",
+        "en",
+        "fr"
+      ]
     },
     "doc_type": {
       "type": "string",
-      "enum": ["note", "pdf", "invoice", "email", "image", "webpage"],
+      "enum": [
+        "note",
+        "pdf",
+        "invoice",
+        "email",
+        "image",
+        "webpage",
+        "hypothesis",
+        "insight",
+        "conversation"
+      ],
       "description": "Document type"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": [
+        "volatile",
+        "crystallized"
+      ],
+      "description": "Memory stage: volatile (chat) vs crystallized (note)"
+    },
+    "research_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "validated",
+        "rejected",
+        "inconclusive"
+      ],
+      "description": "Status for hypotheses"
+    },
+    "decay_factor": {
+      "type": "number",
+      "description": "Individual forgetting curve factor"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Expiration date for hypotheses"
     },
     "content_hash": {
       "type": "string",
@@ -45,17 +89,26 @@
       "description": "SHA256 hash of content (short or full)"
     },
     "file_hash": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "pattern": "^sha256:[a-f0-9]{8,64}$",
       "description": "SHA256 hash of entire file (if different from content)"
     },
     "source_commit": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "pattern": "^[a-f0-9]{7,40}$",
       "description": "Git commit hash when document was processed"
     },
     "source_commit_date": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time",
       "description": "Git commit timestamp"
     },
@@ -79,13 +132,19 @@
       "description": "Access count for information decay"
     },
     "importance": {
-      "type": ["number", "null"],
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0.0,
       "maximum": 1.0,
       "description": "Importance score (0.0-1.0)"
     },
     "decay": {
-      "type": ["number", "null"],
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0.0,
       "maximum": 1.0,
       "description": "Decay factor based on time and usage"
@@ -125,7 +184,11 @@
           "description": "Named entities extracted from text"
         }
       },
-      "required": ["sections", "chunks", "entities"],
+      "required": [
+        "sections",
+        "chunks",
+        "entities"
+      ],
       "additionalProperties": false
     },
     "edges": {
@@ -177,12 +240,18 @@
                 "format": "date-time"
               }
             },
-            "required": ["step", "completed", "timestamp"],
+            "required": [
+              "step",
+              "completed",
+              "timestamp"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["steps"]
+      "required": [
+        "steps"
+      ]
     }
   },
   "required": [

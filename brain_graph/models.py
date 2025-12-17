@@ -55,6 +55,18 @@ class EntityType(str, Enum):
     LOC = "LOC"  # Location
     ORG = "ORG"  # Organization
     MISC = "MISC"  # Miscellaneous
+    AGENT = "AGENT"  # AI Agent or User
+
+
+class AgentProfile(BaseModel):
+    """Configuration for AGENT entities."""
+
+    model_config = ConfigDict(extra="allow")
+
+    model_name: Optional[str] = Field(None, alias="model")
+    status: Optional[Literal["active", "inactive"]] = None
+    capabilities: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
 
 
 class Entity(BaseModel):
@@ -65,6 +77,7 @@ class Entity(BaseModel):
     id: str = Field(pattern=r"^(ent_[a-z0-9_-]+|[0-9A-HJKMNP-TV-Z]{26})$")
     ulid: str = Field(pattern=r"^[0-9A-HJKMNP-TV-Z]{26}$")
     entity_type: EntityType
+    agent_profile: Optional[AgentProfile] = None
     title: str = Field(min_length=1)
     occurrences: int = Field(ge=1)
     mentioned_in: list[str] = Field(default_factory=list)
@@ -95,6 +108,11 @@ class EdgeType(str, Enum):
     SIMILAR = "similar"
     MENTIONS = "mentions"
     RELATED = "related"
+    AUTHORED_BY = "authored_by"
+    DERIVED_FROM = "derived_from"
+    INVESTIGATES = "investigates"
+    PREDICTED_CONNECTION = "predicted_connection"
+    VALIDATED_CONNECTION = "validated_connection"
 
 
 class Edge(BaseModel):
@@ -199,6 +217,25 @@ class DocType(str, Enum):
     EMAIL = "email"
     IMAGE = "image"
     WEBPAGE = "webpage"
+    HYPOTHESIS = "hypothesis"
+    INSIGHT = "insight"
+    CONVERSATION = "conversation"
+
+
+class LifecycleStage(str, Enum):
+    """Memory stage."""
+
+    VOLATILE = "volatile"
+    CRYSTALLIZED = "crystallized"
+
+
+class ResearchStatus(str, Enum):
+    """Status for hypotheses."""
+
+    PENDING = "pending"
+    VALIDATED = "validated"
+    REJECTED = "rejected"
+    INCONCLUSIVE = "inconclusive"
 
 
 class Document(BaseModel):
@@ -214,6 +251,10 @@ class Document(BaseModel):
     title: str = Field(min_length=1)
     language: str = Field(pattern=r"^[a-z]{2}$")
     doc_type: DocType
+    lifecycle_stage: Optional[LifecycleStage] = None
+    research_status: Optional[ResearchStatus] = None
+    decay_factor: Optional[float] = None
+    valid_until: Optional[datetime] = None
 
     # Hashing & Versioning
     content_hash: str = Field(pattern=r"^sha256:[a-f0-9]{8,64}$")
@@ -305,4 +346,6 @@ class TaxonomyCategory(BaseModel):
     title: str = Field(min_length=1)
     description: Optional[str] = None
     keywords: list[str] = Field(default_factory=list)
+    importance: Optional[int] = Field(None, ge=1, le=10)
+    decay: Optional[int] = Field(None, ge=1, le=10)
     embedding: Optional[list[float]] = None

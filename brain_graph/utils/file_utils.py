@@ -55,9 +55,26 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
                 config_path = candidate
                 break
 
+    if config_path and config_path.exists():
+        return json.loads(config_path.read_text(encoding="utf-8"))
+
+    # Fallback: Try to parse config/config.md directly if no json found
+    try:
+        md_path = Path("config/config.md")
+        if md_path.exists():
+            # Lazy import to avoid circular deps
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("config_converter", "brain_graph/conversion/config_converter.py")
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return module.flatten_config(module.parse_config(md_path.read_text(encoding="utf-8")))
+    except Exception:
+        pass
+
     if config_path is None or not config_path.exists():
-        raise FileNotFoundError(
-            "config.json not found. Searched for:\n"
+        # Return empty config instead of raising, to allow bootstrapping
+        return {}
             "  - .brain_graph/config/config.json\n"
             "  - config.json\n"
             "Please create a config file or use --config to specify the path."

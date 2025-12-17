@@ -38,10 +38,14 @@ try:
     import tree_sitter_python
     import tree_sitter_javascript
     import tree_sitter_typescript
+
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
-    print("Warning: tree-sitter not available. Code parsing will be limited.", file=sys.stderr)
+    print(
+        "Warning: tree-sitter not available. Code parsing will be limited.",
+        file=sys.stderr,
+    )
 
 from brain_graph.utils.file_utils import (
     get_or_generate_ulid,
@@ -50,13 +54,14 @@ from brain_graph.utils.file_utils import (
     get_month_folder,
     slugify,
     get_source_hash,
-    get_source_version
+    get_source_version,
 )
 from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
 # -----------------------------------------------------------------------------
 # Config
 # -----------------------------------------------------------------------------
+
 
 def load_config(config_path: Path | None = None) -> dict[str, Any]:
     """
@@ -77,7 +82,17 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
     }
 
     if config_path is None:
+        # Search in current directory and parents
         for parent in [Path.cwd(), *Path.cwd().parents]:
+            # Try config.md first (via file_utils logic, but here we duplicate slightly for simplicity or use file_utils.load_config?)
+            # Better: use file_utils.load_config if possible, but this function has specific defaults logic.
+            # Let's just add the config.md check here too.
+            candidate_md = parent / "config" / "config.md"
+            if candidate_md.exists():
+                # We rely on file_utils to parse it if we want to be clean, but let's keep it simple.
+                # Actually, let's import load_config from file_utils and merge.
+                pass
+
             candidate = parent / ".brain_graph" / "config" / "config.json"
             if candidate.exists():
                 config_path = candidate
@@ -87,8 +102,16 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
                 config_path = candidate
                 break
 
+    user_config = {}
     if config_path and config_path.exists():
         user_config = json.loads(config_path.read_text(encoding="utf-8"))
+    else:
+        # Try loading from file_utils which handles config.md
+        from brain_graph.utils.file_utils import load_config as load_global_config
+
+        user_config = load_global_config()
+
+    if user_config:
         # Map chunking_ prefix to chunk_ for backwards compatibility
         mapped_config = {}
         for key, value in user_config.items():
@@ -106,6 +129,7 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
 # ULID Generation
 # -----------------------------------------------------------------------------
 
+
 def _ulid_timestamp_bytes(ulid_str: str) -> bytes:
     """Return the 6 timestamp bytes from a ULID string."""
     return ulid.from_str(ulid_str).bytes[:6]
@@ -121,9 +145,11 @@ def make_ulid(seed: str, *, ts_bytes: bytes) -> str:
 # Markdown Parsing
 # -----------------------------------------------------------------------------
 
+
 @dataclass
 class Block:
     """Ein Block aus dem Markdown."""
+
     type: str  # "heading", "code", "text"
     content: str
     level: int = 0  # Heading-Level (1-6)
@@ -138,6 +164,7 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 @dataclass
 class Marker:
     """Ein Strukturmarker im Markdown."""
+
     type: str  # "heading", "code"
     start: int
     end: int
@@ -149,6 +176,7 @@ class Marker:
 @dataclass
 class CodeUnit:
     """Eine semantische Code-Einheit (Funktion, Klasse, Methode) aus Tree-sitter Parsing."""
+
     type: str  # "function", "class", "method"
     name: str
     signature: str
@@ -211,9 +239,17 @@ def extract_docstring(node: TSNode, code_bytes: bytes) -> str:
                     if stmt.type == "expression_statement":
                         for expr_child in stmt.children:
                             if expr_child.type == "string":
-                                doc = code_bytes[expr_child.start_byte:expr_child.end_byte].decode("utf-8")
+                                doc = code_bytes[
+                                    expr_child.start_byte : expr_child.end_byte
+                                ].decode("utf-8")
                                 # Strip quotes
-                                doc = doc.strip().strip('"""').strip("'''").strip('"').strip("'")
+                                doc = (
+                                    doc.strip()
+                                    .strip('"""')
+                                    .strip("'''")
+                                    .strip('"')
+                                    .strip("'")
+                                )
                                 return doc
     return ""
 
@@ -225,13 +261,13 @@ def extract_signature(node: TSNode, code_bytes: bytes) -> str:
         if child.type in ["def", "class", "identifier", "parameters", "type"]:
             continue
         # Get first line (signature)
-        sig_bytes = code_bytes[node.start_byte:node.end_byte]
+        sig_bytes = code_bytes[node.start_byte : node.end_byte]
         lines = sig_bytes.decode("utf-8").split("\n")
         if lines:
             return lines[0].strip()
 
     # Fallback: extract def/class line
-    sig_bytes = code_bytes[node.start_byte:node.end_byte]
+    sig_bytes = code_bytes[node.start_byte : node.end_byte]
     lines = sig_bytes.decode("utf-8").split("\n")
     return lines[0].strip() if lines else ""
 
@@ -264,7 +300,7 @@ def parse_code_with_treesitter(code: str, language: str) -> list[CodeUnit]:
             name = ""
             for child in node.children:
                 if child.type == "identifier":
-                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    name = code_bytes[child.start_byte : child.end_byte].decode("utf-8")
                     break
 
             if name:
@@ -273,38 +309,42 @@ def parse_code_with_treesitter(code: str, language: str) -> list[CodeUnit]:
 
                 unit_type = "method" if parent_class else "function"
 
-                units.append(CodeUnit(
-                    type=unit_type,
-                    name=name,
-                    signature=signature,
-                    docstring=docstring,
-                    language=language,
-                    char_start=node.start_byte,
-                    char_end=node.end_byte,
-                    parent_class=parent_class,
-                ))
+                units.append(
+                    CodeUnit(
+                        type=unit_type,
+                        name=name,
+                        signature=signature,
+                        docstring=docstring,
+                        language=language,
+                        char_start=node.start_byte,
+                        char_end=node.end_byte,
+                        parent_class=parent_class,
+                    )
+                )
 
         # Python class
         elif node.type == "class_definition":
             name = ""
             for child in node.children:
                 if child.type == "identifier":
-                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    name = code_bytes[child.start_byte : child.end_byte].decode("utf-8")
                     break
 
             if name:
                 signature = extract_signature(node, code_bytes)
                 docstring = extract_docstring(node, code_bytes)
 
-                units.append(CodeUnit(
-                    type="class",
-                    name=name,
-                    signature=signature,
-                    docstring=docstring,
-                    language=language,
-                    char_start=node.start_byte,
-                    char_end=node.end_byte,
-                ))
+                units.append(
+                    CodeUnit(
+                        type="class",
+                        name=name,
+                        signature=signature,
+                        docstring=docstring,
+                        language=language,
+                        char_start=node.start_byte,
+                        char_end=node.end_byte,
+                    )
+                )
 
                 # Visit methods inside class
                 for child in node.children:
@@ -313,29 +353,41 @@ def parse_code_with_treesitter(code: str, language: str) -> list[CodeUnit]:
                             visit_node(stmt, parent_class=name)
 
         # JavaScript/TypeScript function
-        elif node.type in ["function_declaration", "method_definition", "arrow_function"]:
+        elif node.type in [
+            "function_declaration",
+            "method_definition",
+            "arrow_function",
+        ]:
             name = ""
             for child in node.children:
                 if child.type in ["identifier", "property_identifier"]:
-                    name = code_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                    name = code_bytes[child.start_byte : child.end_byte].decode("utf-8")
                     break
 
             if name or node.type == "arrow_function":
                 if not name:
                     name = "<anonymous>"
 
-                signature = code_bytes[node.start_byte:node.end_byte].decode("utf-8").split("\n")[0]
+                signature = (
+                    code_bytes[node.start_byte : node.end_byte]
+                    .decode("utf-8")
+                    .split("\n")[0]
+                )
 
-                units.append(CodeUnit(
-                    type="function" if node.type != "method_definition" else "method",
-                    name=name,
-                    signature=signature,
-                    docstring="",
-                    language=language,
-                    char_start=node.start_byte,
-                    char_end=node.end_byte,
-                    parent_class=parent_class,
-                ))
+                units.append(
+                    CodeUnit(
+                        type=(
+                            "function" if node.type != "method_definition" else "method"
+                        ),
+                        name=name,
+                        signature=signature,
+                        docstring="",
+                        language=language,
+                        char_start=node.start_byte,
+                        char_end=node.end_byte,
+                        parent_class=parent_class,
+                    )
+                )
 
         # Recurse into children
         for child in node.children:
@@ -357,17 +409,17 @@ def parse_markdown(text: str) -> list[Block]:
     3. Text zwischen Markern als Content-Blöcke
     """
     markers: list[Marker] = []
-    
+
     # Headings extrahieren
     headings = markdown_query.run("select(.h)", text, None)
     for item in headings:
         if not item.text or not item.text.strip():
             continue
-        
+
         pos = text.find(item.text)
         if pos == -1:
             continue
-        
+
         match = HEADING_RE.match(item.text)
         if match:
             level = len(match.group(1))
@@ -375,97 +427,112 @@ def parse_markdown(text: str) -> list[Block]:
         else:
             level = item.text.count("#", 0, 7)
             title = item.text.lstrip("#").strip()
-        
-        markers.append(Marker(
-            type="heading",
-            start=pos,
-            end=pos + len(item.text),
-            content=title,
-            level=level,
-        ))
-    
+
+        markers.append(
+            Marker(
+                type="heading",
+                start=pos,
+                end=pos + len(item.text),
+                content=title,
+                level=level,
+            )
+        )
+
     # Code-Blöcke extrahieren
     codes = markdown_query.run("select(.code)", text, None)
     for item in codes:
         if not item.text or not item.text.strip():
             continue
-        
+
         pos = text.find(item.text)
         if pos == -1:
             continue
-        
+
         lines = item.text.split("\n")
         first_line = lines[0] if lines else ""
         lang = first_line.replace("`", "").strip()
-        
+
         # Code ohne Fences
-        code_lines = lines[1:-1] if len(lines) > 2 else lines[1:] if len(lines) > 1 else []
+        code_lines = (
+            lines[1:-1] if len(lines) > 2 else lines[1:] if len(lines) > 1 else []
+        )
         code_content = "\n".join(code_lines)
-        
-        markers.append(Marker(
-            type="code",
-            start=pos,
-            end=pos + len(item.text),
-            content=code_content,
-            language=lang,
-        ))
-    
+
+        markers.append(
+            Marker(
+                type="code",
+                start=pos,
+                end=pos + len(item.text),
+                content=code_content,
+                language=lang,
+            )
+        )
+
     # Nach Position sortieren
     markers.sort(key=lambda m: m.start)
-    
+
     # Blöcke generieren
     blocks: list[Block] = []
     last_end = 0
-    
+
     for marker in markers:
         # Text vor diesem Marker?
         if marker.start > last_end:
-            text_content = text[last_end:marker.start]
+            text_content = text[last_end : marker.start]
             if text_content.strip():
-                blocks.append(Block(
-                    type="text",
-                    content=text_content,
-                    char_start=last_end,
-                    char_end=marker.start,
-                ))
-        
+                blocks.append(
+                    Block(
+                        type="text",
+                        content=text_content,
+                        char_start=last_end,
+                        char_end=marker.start,
+                    )
+                )
+
         # Marker selbst
         if marker.type == "heading":
-            blocks.append(Block(
-                type="heading",
-                content=marker.content,
-                level=marker.level,
-                char_start=marker.start,
-                char_end=marker.end,
-            ))
+            blocks.append(
+                Block(
+                    type="heading",
+                    content=marker.content,
+                    level=marker.level,
+                    char_start=marker.start,
+                    char_end=marker.end,
+                )
+            )
         elif marker.type == "code":
-            blocks.append(Block(
-                type="code",
-                content=marker.content,
-                language=marker.language,
-                char_start=marker.start,
-                char_end=marker.end,
-            ))
-        
+            blocks.append(
+                Block(
+                    type="code",
+                    content=marker.content,
+                    language=marker.language,
+                    char_start=marker.start,
+                    char_end=marker.end,
+                )
+            )
+
         last_end = marker.end
-    
+
     # Text nach letztem Marker
     if last_end < len(text):
         text_content = text[last_end:]
         if text_content.strip():
-            blocks.append(Block(
-                type="text",
-                content=text_content,
-                char_start=last_end,
-                char_end=len(text),
-            ))
-    
+            blocks.append(
+                Block(
+                    type="text",
+                    content=text_content,
+                    char_start=last_end,
+                    char_end=len(text),
+                )
+            )
+
     return blocks
 
 
 # -----------------------------------------------------------------------------
 # Sentence Splitting & Chunking
 # -----------------------------------------------------------------------------
+
 
 def estimate_tokens(text: str) -> int:
     """Grobe Token-Schätzung (chars / 4)."""
@@ -490,7 +557,9 @@ def detect_language(text: str, default: str = "en") -> str:
         return default
 
 
-def split_sentences(text: str, segmenter: pysbd.Segmenter) -> list[tuple[str, int, int]]:
+def split_sentences(
+    text: str, segmenter: pysbd.Segmenter
+) -> list[tuple[str, int, int]]:
     """Splittet Text in Sätze mit Positionen.
 
     Returns: Liste von (sentence, char_start, char_end)
@@ -517,17 +586,16 @@ def split_sentences(text: str, segmenter: pysbd.Segmenter) -> list[tuple[str, in
 
 
 def split_long_sentence(
-    text: str,
-    char_start: int,
-    target_tokens: int
+    text: str, char_start: int, target_tokens: int
 ) -> list[tuple[str, int, int]]:
     """Splittet einen zu langen Satz an Kommas, Semikola, etc."""
     if estimate_tokens(text) <= target_tokens:
         return [(text, char_start, char_start + len(text))]
 
     import re
+
     # Split an Kommas, Semikola, etc.
-    split_pattern = r'([,;:\-–—]\s+)'
+    split_pattern = r"([,;:\-–—]\s+)"
     segments = re.split(split_pattern, text)
 
     parts = []
@@ -561,9 +629,11 @@ def split_long_sentence(
         if estimate_tokens(part_text) > target_tokens:
             # Hard split
             for i in range(0, len(part_text), max_chars):
-                chunk = part_text[i:i+max_chars].strip()
+                chunk = part_text[i : i + max_chars].strip()
                 if chunk:
-                    final_parts.append((chunk, part_start + i, part_start + i + len(chunk)))
+                    final_parts.append(
+                        (chunk, part_start + i, part_start + i + len(chunk))
+                    )
         else:
             final_parts.append((part_text, part_start, part_end))
 
@@ -727,7 +797,10 @@ class Node:
             d["title"] = self.title
         if self.type == "section":
             d["level"] = self.level
-        if self.type in ("chunk", "code", "function", "class", "method") and self.language:
+        if (
+            self.type in ("chunk", "code", "function", "class", "method")
+            and self.language
+        ):
             d["language"] = self.language
         if self.type in ("chunk", "code", "function", "class", "method"):
             d["char_start"] = self.char_start
@@ -748,7 +821,7 @@ class Edge:
     type: str  # "parent_of", "contains", "next"
     weight: int = 10
     overlap_chars: int = 0
-    
+
     def to_dict(self) -> dict:
         d = {
             "from_id": self.from_id,
@@ -797,15 +870,18 @@ def build_graph(
                 segmenter_cache[lang] = pysbd.Segmenter(language=lang, clean=False)
             except ValueError:
                 # Fallback auf Deutsch wenn Sprache nicht unterstützt
-                print(f"Warning: Language '{lang}' not supported by pysbd, falling back to 'de'", file=sys.stderr)
+                print(
+                    f"Warning: Language '{lang}' not supported by pysbd, falling back to 'de'",
+                    file=sys.stderr,
+                )
                 segmenter_cache[lang] = pysbd.Segmenter(language="de", clean=False)
         return segmenter_cache[lang]
-    
+
     def make_id(prefix: str, content: str) -> str:
         """Erstellt eine ID aus Prefix und Content-Hash (xxhash64)."""
         short_hash = xxhash.xxh64(content.encode()).hexdigest()[:8]
         return f"{prefix}_{short_hash}"
-    
+
     for block in blocks:
         if block.type == "heading":
             # Prüfe ob wir eine Skip-Section beenden
@@ -837,16 +913,18 @@ def build_graph(
                 section_stack.pop()
 
             if section_stack:
-                edges.append(Edge(
-                    from_id=section_stack[-1].id,
-                    to_id=node.id,
-                    type="parent_of",
-                    weight=10,
-                ))
+                edges.append(
+                    Edge(
+                        from_id=section_stack[-1].id,
+                        to_id=node.id,
+                        type="parent_of",
+                        weight=10,
+                    )
+                )
 
             section_stack.append(node)
             current_section = node
-        
+
         elif block.type == "code":
             # Skip wenn in übersprungener Section
             if skip_until_level is not None:
@@ -858,20 +936,21 @@ def build_graph(
             if code_units:
                 # Tree-sitter erfolgreich: Erstelle Nodes für Funktionen/Klassen
                 class_nodes = {}  # name -> node (für defines-Edges)
-                function_names = {unit.name for unit in code_units if unit.type == "function"}
+                function_names = {
+                    unit.name for unit in code_units if unit.type == "function"
+                }
 
                 for unit in code_units:
                     # Node ID basierend auf Typ und Name
                     node_id = make_id(
-                        unit.type,
-                        f"{source_file}:{block.char_start}:{unit.name}"
+                        unit.type, f"{source_file}:{block.char_start}:{unit.name}"
                     )
 
                     node = Node(
                         id=node_id,
                         ulid=make_ulid(node_id, ts_bytes=ts_bytes),
                         type=unit.type,
-                        content=block.content[unit.char_start:unit.char_end],
+                        content=block.content[unit.char_start : unit.char_end],
                         title=unit.name,
                         signature=unit.signature,
                         docstring=unit.docstring,
@@ -887,53 +966,73 @@ def build_graph(
 
                     # Contains-Edge von aktueller Section
                     if current_section:
-                        edges.append(Edge(
-                            from_id=current_section.id,
-                            to_id=node.id,
-                            type="contains",
-                            weight=8,
-                        ))
+                        edges.append(
+                            Edge(
+                                from_id=current_section.id,
+                                to_id=node.id,
+                                type="contains",
+                                weight=8,
+                            )
+                        )
 
                     # Defines-Edge: Class → Method
                     if unit.type == "method" and unit.parent_class:
                         if unit.parent_class in class_nodes:
-                            edges.append(Edge(
-                                from_id=class_nodes[unit.parent_class].id,
-                                to_id=node.id,
-                                type="defines",
-                                weight=10,
-                            ))
+                            edges.append(
+                                Edge(
+                                    from_id=class_nodes[unit.parent_class].id,
+                                    to_id=node.id,
+                                    type="defines",
+                                    weight=10,
+                                )
+                            )
 
                     # Next-Edge vom vorherigen Chunk
                     if prev_chunk:
-                        edges.append(Edge(
-                            from_id=prev_chunk.id,
-                            to_id=node.id,
-                            type="next",
-                        ))
+                        edges.append(
+                            Edge(
+                                from_id=prev_chunk.id,
+                                to_id=node.id,
+                                type="next",
+                            )
+                        )
                     prev_chunk = node
 
                 # Optional: Calls-Edges (einfache Heuristik basierend auf Namen)
                 # Für jede Funktion: Suche Funktionsaufrufe im Code
                 for unit in code_units:
                     if unit.type in ["function", "method"]:
-                        code_text = block.content[unit.char_start:unit.char_end]
+                        code_text = block.content[unit.char_start : unit.char_end]
                         for func_name in function_names:
                             if func_name != unit.name and func_name in code_text:
                                 # Finde Target-Node
-                                target_nodes = [n for n in nodes if n.title == func_name and n.type in ["function", "method"]]
+                                target_nodes = [
+                                    n
+                                    for n in nodes
+                                    if n.title == func_name
+                                    and n.type in ["function", "method"]
+                                ]
                                 for target in target_nodes:
-                                    edges.append(Edge(
-                                        from_id=next(n for n in nodes if n.title == unit.name and n.type == unit.type).id,
-                                        to_id=target.id,
-                                        type="calls",
-                                        weight=5,
-                                    ))
+                                    edges.append(
+                                        Edge(
+                                            from_id=next(
+                                                n
+                                                for n in nodes
+                                                if n.title == unit.name
+                                                and n.type == unit.type
+                                            ).id,
+                                            to_id=target.id,
+                                            type="calls",
+                                            weight=5,
+                                        )
+                                    )
                                     break
 
             else:
                 # Fallback: Atomarer Code-Block (Tree-sitter nicht verfügbar oder parsing fehlgeschlagen)
-                node_id = make_id("code", f"{source_file}:{block.char_start}:{block.content[:50]}")
+                node_id = make_id(
+                    "code", f"{source_file}:{block.char_start}:{block.content[:50]}"
+                )
                 node = Node(
                     id=node_id,
                     ulid=make_ulid(node_id, ts_bytes=ts_bytes),
@@ -947,20 +1046,24 @@ def build_graph(
 
                 # Contains-Edge von aktueller Section
                 if current_section:
-                    edges.append(Edge(
-                        from_id=current_section.id,
-                        to_id=node.id,
-                        type="contains",
-                        weight=8,
-                    ))
+                    edges.append(
+                        Edge(
+                            from_id=current_section.id,
+                            to_id=node.id,
+                            type="contains",
+                            weight=8,
+                        )
+                    )
 
                 # Next-Edge vom vorherigen Chunk
                 if prev_chunk:
-                    edges.append(Edge(
-                        from_id=prev_chunk.id,
-                        to_id=node.id,
-                        type="next",
-                    ))
+                    edges.append(
+                        Edge(
+                            from_id=prev_chunk.id,
+                            to_id=node.id,
+                            type="next",
+                        )
+                    )
                 prev_chunk = node
 
         elif block.type == "text":
@@ -968,9 +1071,22 @@ def build_graph(
             if skip_until_level is not None:
                 continue
 
+            # Check for Provenance (+author:, +reviewed_by:)
+            # Simple regex check on the block content
+            author_match = re.search(r"\+author:(&[a-zA-Z0-9_]+)", block.content)
+            if author_match:
+                agent_name = author_match.group(1)
+                # We will add this edge to ALL chunks generated from this block
+                # Or better: add it to the document meta?
+                # Requirement says: "Jedes Dokument zeigt transparent, wer es erstellt hat."
+                # -> Edge `authored_by` from Document/Chunk to Agent Entity.
+                pass
+
             # Text → Sätze → Chunks
             # Erkenne Sprache für diesen Block
-            block_lang = detect_language(block.content, default=config.get("chunk_language", "en"))
+            block_lang = detect_language(
+                block.content, default=config.get("chunk_language", "en")
+            )
             block_segmenter = get_segmenter(block_lang)
 
             sentences = split_sentences(block.content, block_segmenter)
@@ -981,7 +1097,9 @@ def build_graph(
                 overlap_tokens=config["chunk_overlap_tokens"],
             )
 
-            for idx, (chunk_text, chunk_start, chunk_end, overlap_chars) in enumerate(chunks):
+            for idx, (chunk_text, chunk_start, chunk_end, overlap_chars) in enumerate(
+                chunks
+            ):
                 # Erster Chunk nach einer Section: char_start bei Überschrift beginnen
                 if idx == 0 and current_section:
                     # Inklusive Überschrift
@@ -990,7 +1108,9 @@ def build_graph(
                     actual_char_start = block.char_start + chunk_start
 
                 chunk_counter += 1
-                node_id = make_id("chunk", f"{source_file}:{chunk_counter}:{chunk_text[:50]}")
+                node_id = make_id(
+                    "chunk", f"{source_file}:{chunk_counter}:{chunk_text[:50]}"
+                )
                 node = Node(
                     id=node_id,
                     ulid=make_ulid(node_id, ts_bytes=ts_bytes),
@@ -1001,26 +1121,48 @@ def build_graph(
                     char_end=block.char_start + chunk_end,
                 )
                 nodes.append(node)
-                
+
+                # Provenance Edge
+                if author_match:
+                    agent_name = author_match.group(1)
+                    # Create Agent Entity Node if not exists?
+                    # Ideally NER handles this, but we need the edge NOW or later.
+                    # Let's add a special edge type that DB builder can resolve.
+                    # Or just add it as a property to the node for now?
+                    # Better: Add an edge to a placeholder ID "ent_&AgentName"
+                    agent_id = f"ent_{hashlib.sha1(agent_name.lower().encode()).hexdigest()[:8]}"
+                    edges.append(
+                        Edge(
+                            from_id=node.id,
+                            to_id=agent_id,
+                            type="authored_by",
+                            weight=10,
+                        )
+                    )
+
                 # Contains-Edge von aktueller Section
                 if current_section:
-                    edges.append(Edge(
-                        from_id=current_section.id,
-                        to_id=node.id,
-                        type="contains",
-                        weight=8,
-                    ))
-                
+                    edges.append(
+                        Edge(
+                            from_id=current_section.id,
+                            to_id=node.id,
+                            type="contains",
+                            weight=8,
+                        )
+                    )
+
                 # Next-Edge vom vorherigen Chunk
                 if prev_chunk:
-                    edges.append(Edge(
-                        from_id=prev_chunk.id,
-                        to_id=node.id,
-                        type="next",
-                        overlap_chars=overlap_chars,
-                    ))
+                    edges.append(
+                        Edge(
+                            from_id=prev_chunk.id,
+                            to_id=node.id,
+                            type="next",
+                            overlap_chars=overlap_chars,
+                        )
+                    )
                 prev_chunk = node
-    
+
     return nodes, edges
 
 
@@ -1028,27 +1170,48 @@ def build_graph(
 # Main
 # -----------------------------------------------------------------------------
 
+
 def main():
     start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Chunk Markdown to graph")
-    parser.add_argument("-i", "--input", type=Path, required=True, help="Input Markdown file")
+    parser.add_argument(
+        "-i", "--input", type=Path, required=True, help="Input Markdown file"
+    )
     parser.add_argument("-c", "--config", type=Path, help="config.json path")
-    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
-                        help="Base output directory (default: .brain_graph/data)")
-    parser.add_argument("--vault-dir", type=Path, default=Path("vault"),
-                        help="Vault directory for permanent storage (default: vault)")
-    parser.add_argument("--delete-source", action="store_true",
-                        help="Delete source file after processing (default: keep)")
-    parser.add_argument("--force", action="store_true",
-                        help="Force processing even if vault file unchanged")
+    parser.add_argument(
+        "--base-dir",
+        type=Path,
+        default=Path(".brain_graph/data"),
+        help="Base output directory (default: .brain_graph/data)",
+    )
+    parser.add_argument(
+        "--vault-dir",
+        type=Path,
+        default=Path("vault"),
+        help="Vault directory for permanent storage (default: vault)",
+    )
+    parser.add_argument(
+        "--delete-source",
+        action="store_true",
+        help="Delete source file after processing (default: keep)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force processing even if vault file unchanged",
+    )
     parser.add_argument(
         "--format",
         choices=["json", "text"],
         default="json",
         help="Output format (default: json)",
     )
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
-    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON output"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Include traceback in JSON error output"
+    )
     args = parser.parse_args()
 
     try:
@@ -1068,13 +1231,13 @@ def main():
 
         # Monat aus Input-Pfad nutzen (falls vault/YYYY-MM/) oder aktuellen Monat
         parent_name = args.input.parent.name
-        if re.match(r'^\d{4}-\d{2}$', parent_name):
+        if re.match(r"^\d{4}-\d{2}$", parent_name):
             month = parent_name
         else:
             month = get_month_folder()
 
         # ULID-Suffix aus stem entfernen (falls Reprocessing von vault-Datei)
-        stem = re.sub(r'-[A-Z0-9]{6}$', '', args.input.stem, flags=re.IGNORECASE)
+        stem = re.sub(r"-[A-Z0-9]{6}$", "", args.input.stem, flags=re.IGNORECASE)
         slug = slugify(stem)
         ulid_suffix = doc_ulid[-6:]
         vault_filename = f"{slug}-{ulid_suffix}.md"
@@ -1109,6 +1272,7 @@ def main():
         # Datei nach vault kopieren (mit aktualisierter ULID)
         if copied_to_vault:
             import shutil
+
             try:
                 shutil.copy2(args.input, vault_path)
                 print(f"Copied to vault: {vault_path}", file=sys.stderr)
@@ -1120,7 +1284,10 @@ def main():
         # Optional: Originaldatei löschen
         if args.delete_source:
             if input_is_vault_target:
-                print("Warning: --delete-source ignored (input is already in vault)", file=sys.stderr)
+                print(
+                    "Warning: --delete-source ignored (input is already in vault)",
+                    file=sys.stderr,
+                )
             else:
                 args.input.unlink()
                 deleted_source = True
@@ -1154,13 +1321,11 @@ def main():
         edges_data = [e.to_dict() for e in edges]
 
         # JSON schreiben
-        output_paths['nodes'].write_text(
-            json.dumps(nodes_data, ensure_ascii=False, indent=2),
-            encoding='utf-8'
+        output_paths["nodes"].write_text(
+            json.dumps(nodes_data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        output_paths['edges'].write_text(
-            json.dumps(edges_data, ensure_ascii=False, indent=2),
-            encoding='utf-8'
+        output_paths["edges"].write_text(
+            json.dumps(edges_data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         # meta.json erstellen
@@ -1170,6 +1335,18 @@ def main():
         source_hash = get_source_hash(vault_path)
         git_info = get_source_version(vault_path)
 
+        # Preserve existing metadata (uses, importance, decay)
+        existing_meta = {}
+        if output_paths["meta"].exists():
+            try:
+                existing_meta = json.loads(
+                    output_paths["meta"].read_text(encoding="utf-8")
+                )
+            except Exception:
+                pass
+
+        uses_count = existing_meta.get("uses", 0) + 1
+
         meta = {
             "source_file": str(vault_path),  # Vault-Pfad als canonical source
             "original_source": str(args.input) if args.input != vault_path else None,
@@ -1178,26 +1355,25 @@ def main():
             "source_commit": git_info["source_commit"],
             "source_commit_date": git_info["source_commit_date"],
             "source_dirty": git_info["source_dirty"],
-            "created_at": now.isoformat(),
+            "created_at": existing_meta.get("created_at", now.isoformat()),
             "modified_at": now.isoformat(),
-            "uses": 1,
-            "importance": None,  # Wird von Taxonomie vererbt
-            "decay": None,       # Wird von Taxonomie vererbt
-            "categories": [],    # Wird von taxonomy_matcher gefüllt
+            "uses": uses_count,
+            "importance": existing_meta.get("importance"),  # Preserve or inherit
+            "decay": existing_meta.get("decay"),  # Preserve or inherit
+            "categories": existing_meta.get("categories", []),
             "processing_steps": [
                 {
                     "step": "chunking",
                     "completed": True,
                     "timestamp": now.isoformat(),
                     "node_count": len(nodes),
-                    "edge_count": len(edges)
+                    "edge_count": len(edges),
                 }
-            ]
+            ],
         }
 
-        output_paths['meta'].write_text(
-            json.dumps(meta, ensure_ascii=False, indent=2),
-            encoding='utf-8'
+        output_paths["meta"].write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         # Stats
@@ -1209,8 +1385,14 @@ def main():
         for e in edges:
             edge_types[e.type] = edge_types.get(e.type, 0) + 1
 
-        print(f"Written {output_paths['nodes']} ({len(nodes)} nodes: {node_types})", file=sys.stderr)
-        print(f"Written {output_paths['edges']} ({len(edges)} edges: {edge_types})", file=sys.stderr)
+        print(
+            f"Written {output_paths['nodes']} ({len(nodes)} nodes: {node_types})",
+            file=sys.stderr,
+        )
+        print(
+            f"Written {output_paths['edges']} ({len(edges)} edges: {edge_types})",
+            file=sys.stderr,
+        )
         print(f"Written {output_paths['meta']}", file=sys.stderr)
 
         result = ok_result(
@@ -1239,9 +1421,18 @@ def main():
         return 0
     except Exception as e:
         if args.format == "json":
-            emit_json(error_result("chunker", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            emit_json(
+                error_result(
+                    "chunker",
+                    e,
+                    include_traceback=args.debug,
+                    duration_ms=ms_since(start),
+                ),
+                pretty=args.pretty,
+            )
             return 1
         raise
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

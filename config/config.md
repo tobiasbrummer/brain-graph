@@ -36,3 +36,11 @@ Configuration for embedding, chunking, and summarization.
 +base_url:<http://localhost:8300/v1>
 +model:jina-reranker-v2-base-multilingual-q8_0
 +api_key:unused
+
+## Agents
+
++dreamer_schedule:daily_0300
++researcher_schedule:every_10_minutes
++gardener_schedule:weekly_monday_0400
++archivist_schedule:daily_0200
++tavily_api_key:env:TAVILY_API_KEY

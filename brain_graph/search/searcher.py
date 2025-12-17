@@ -44,6 +44,7 @@ def semantic_search(
 
     # Use array_cosine_distance for HNSW index utilization (metric='cosine')
     # ORDER BY distance ASC + LIMIT triggers HNSW index scan
+    # Hybrid ranking: similarity * 0.6 + (relevance / 10.0) * 0.4
     results = con.execute(
         """
         SELECT
@@ -51,10 +52,15 @@ def semantic_search(
             n.text,
             n.summary,
             n.source_file,
-            1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256]) as similarity
+            1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256]) as similarity,
+            COALESCE(r.relevance_score, 0.0) as relevance
         FROM chunk_embeddings_256d e
         JOIN nodes n ON e.chunk_id = n.id
-        ORDER BY array_cosine_distance(e.embedding, ?::FLOAT[256]) ASC
+        LEFT JOIN relevance_scores r ON n.ulid = r.ulid
+        ORDER BY (
+            (1.0 - array_cosine_distance(e.embedding, ?::FLOAT[256])) * 0.6 +
+            (COALESCE(r.relevance_score, 0.0) / 10.0) * 0.4
+        ) DESC
         LIMIT ?
     """,
         [query_emb_256d, query_emb_256d, limit],
@@ -67,8 +73,10 @@ def semantic_search(
             "summary": summary,
             "source_file": source_file,
             "similarity": similarity,
+            "relevance": relevance,
+            "score": similarity * 0.6 + (relevance / 10.0) * 0.4,
         }
-        for chunk_id, text, summary, source_file, similarity in results
+        for chunk_id, text, summary, source_file, similarity, relevance in results
     ]
 
 

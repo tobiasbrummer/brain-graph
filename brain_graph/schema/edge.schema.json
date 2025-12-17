@@ -27,28 +27,46 @@
         "calls",
         "defines",
         "imports",
-        "inherits"
+        "inherits",
+        "authored_by",
+        "derived_from",
+        "investigates",
+        "predicted_connection",
+        "validated_connection"
       ],
       "description": "Edge type (parent_of, contains, next from chunker; calls, defines for code; categorized_as from taxonomy)"
     },
     "weight": {
-      "type": ["number", "null"],
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0.0,
       "maximum": 1.0,
       "description": "Edge weight (0.0-1.0)"
     },
     "similarity": {
-      "type": ["number", "null"],
+      "type": [
+        "number",
+        "null"
+      ],
       "minimum": 0.0,
       "maximum": 1.0,
       "description": "Semantic similarity score (for 'similar' edges)"
     },
     "overlap_chars": {
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 0,
       "description": "Character overlap (for 'next'/'prev' edges)"
     }
   },
-  "required": ["from_id", "to_id", "type"],
+  "required": [
+    "from_id",
+    "to_id",
+    "type"
+  ],
   "additionalProperties": false
 }

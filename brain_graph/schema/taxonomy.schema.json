@@ -16,7 +16,9 @@
     },
     "type": {
       "type": "string",
-      "enum": ["category"],
+      "enum": [
+        "category"
+      ],
       "description": "Node type (always 'category' for taxonomy)"
     },
     "title": {
@@ -25,7 +27,10 @@
       "description": "Human-readable category name"
     },
     "description": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Category description for LLM understanding"
     },
     "keywords": {
@@ -35,14 +40,34 @@
       },
       "description": "Keywords/synonyms for matching"
     },
+    "importance": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Importance score (1-10) for relevance calculation"
+    },
+    "decay": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Decay factor (1-10) for relevance calculation"
+    },
     "embedding": {
-      "type": ["array", "null"],
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "type": "number"
       },
       "description": "Vector embedding (if available)"
     }
   },
-  "required": ["id", "ulid", "type", "title"],
+  "required": [
+    "id",
+    "ulid",
+    "type",
+    "title"
+  ],
   "additionalProperties": false
 }

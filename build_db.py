@@ -182,6 +182,32 @@ class BrainGraphDB:
         """
         )
 
+        # Relevance Scores View (Dynamic Calculation)
+        # Formula: importance * 0.4 + uses * 0.2 + (1.0 / (1.0 + decay * days_since_modified / 365.0)) * 0.4
+        # Default values: importance=5, decay=5 if null
+        self.con.execute(
+            """
+            CREATE OR REPLACE VIEW relevance_scores AS
+            SELECT
+                ulid,
+                COALESCE(importance, 5.0) as importance,
+                COALESCE(uses, 0) as uses,
+                COALESCE(decay, 5.0) as decay,
+                modified_at,
+                date_diff('day', modified_at, CURRENT_TIMESTAMP) as days_since_modified,
+                (
+                    (COALESCE(importance, 5.0) * 0.4) +
+                    (COALESCE(uses, 0) * 0.2) +
+                    (
+                        1.0 / (
+                            1.0 + (COALESCE(decay, 5.0) * date_diff('day', modified_at, CURRENT_TIMESTAMP) / 365.0)
+                        ) * 0.4
+                    )
+                ) as relevance_score
+            FROM meta;
+            """
+        )
+
     def import_nodes(
         self, nodes_path: Path, source_file: str, source_text_cache: dict = None
     ):

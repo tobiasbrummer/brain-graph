@@ -208,6 +208,32 @@ class BrainGraphDB:
         """
         )
 
+        # Relevance Scores View (Dynamic Calculation)
+        # Formula: importance * 0.4 + uses * 0.2 + (1.0 / (1.0 + decay * days_since_modified / 365.0)) * 0.4
+        # Default values: importance=5, decay=5 if null
+        self.con.execute(
+            """
+            CREATE OR REPLACE VIEW relevance_scores AS
+            SELECT
+                ulid,
+                COALESCE(importance, 5.0) as importance,
+                COALESCE(uses, 0) as uses,
+                COALESCE(decay, 5.0) as decay,
+                modified_at,
+                date_diff('day', modified_at, CURRENT_TIMESTAMP) as days_since_modified,
+                (
+                    (COALESCE(importance, 5.0) * 0.4) +
+                    (COALESCE(uses, 0) * 0.2) +
+                    (
+                        1.0 / (
+                            1.0 + (COALESCE(decay, 5.0) * date_diff('day', modified_at, CURRENT_TIMESTAMP) / 365.0)
+                        ) * 0.4
+                    )
+                ) as relevance_score
+            FROM meta;
+            """
+        )
+
     def import_directory(
         self,
         data_dir: Path,
@@ -1062,9 +1088,7 @@ def main():
                 "  from brain_graph.db.db_builder import BrainGraphDB", file=sys.stderr
             )
             print("  db = BrainGraphDB(':memory:')", file=sys.stderr)
-            print(
-                "  db.import_directory(Path('.brain_graph/data'))", file=sys.stderr
-            )
+            print("  db.import_directory(Path('.brain_graph/data'))", file=sys.stderr)
             print("  db.build_indexes()", file=sys.stderr)
         return 0
     except Exception as e:

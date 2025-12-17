@@ -26,7 +26,7 @@ from brain_graph.utils.file_utils import (
     generate_ulid,
     get_output_paths,
     strip_ulid_lines,
-    update_meta
+    update_meta,
 )
 from brain_graph.utils.cli_utils import emit_json, error_result, ms_since, ok_result
 
@@ -68,25 +68,23 @@ def load_spacy_model(lang: str = "de") -> spacy.Language:
 def normalize_markdown(text: str) -> str:
     """Entfernt Markdown-Syntax vor NER."""
     import re
+
     text = strip_ulid_lines(text)
     # Links entfernen: [text](url) -> text
-    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
     # Bold/Italic entfernen
-    text = re.sub(r'\*\*([^\*]+)\*\*', r'\1', text)
-    text = re.sub(r'\*([^\*]+)\*', r'\1', text)
-    text = re.sub(r'__([^_]+)__', r'\1', text)
-    text = re.sub(r'_([^_]+)_', r'\1', text)
+    text = re.sub(r"\*\*([^\*]+)\*\*", r"\1", text)
+    text = re.sub(r"\*([^\*]+)\*", r"\1", text)
+    text = re.sub(r"__([^_]+)__", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
     # Headers entfernen
-    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
     # Code backticks entfernen
-    text = re.sub(r'`([^`]+)`', r'\1', text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
     return text
 
 
-def extract_chunk_text(
-    chunk_node: dict[str, Any],
-    source_text: str
-) -> str:
+def extract_chunk_text(chunk_node: dict[str, Any], source_text: str) -> str:
     """Extrahiert und normalisiert Text aus Chunk."""
     start = chunk_node.get("char_start", 0)
     end = chunk_node.get("char_end", 0)
@@ -107,9 +105,7 @@ def make_entity_id(entity_text: str, entity_type: str) -> str:
 
 
 def extract_entities(
-    text: str,
-    nlp: spacy.Language,
-    min_count: int = 1
+    text: str, nlp: spacy.Language, min_count: int = 1
 ) -> list[tuple[str, str]]:
     """Extrahiert Named Entities aus Text.
 
@@ -117,10 +113,18 @@ def extract_entities(
     """
     import re
 
+    # 1. Custom Agent Extraction (&Name)
+    agent_matches = re.findall(r"&([A-Z][a-zA-Z0-9_]+)", text)
+    custom_entities = []
+    for agent_name in agent_matches:
+        custom_entities.append((f"&{agent_name}", "AGENT"))
+
     doc = nlp(text)
 
     # Sammle Entities mit Typ
     entities = []
+    entities.extend(custom_entities)
+
     for ent in doc.ents:
         # Filtere irrelevante Entity-Types
         if ent.label_ in ["MISC", "CARDINAL", "ORDINAL", "QUANTITY"]:
@@ -129,12 +133,16 @@ def extract_entities(
         # Normalisiere Text
         entity_text = ent.text.strip()
 
+        # Skip if it looks like an agent (already handled)
+        if entity_text.startswith("&"):
+            continue
+
         # Filtere zu kurze Entities
         if len(entity_text) < 3:
             continue
 
         # Filtere URL-Artefakte und Markdown-Reste
-        if any(char in entity_text for char in ['[', ']', '(', ')', '%', '{']):
+        if any(char in entity_text for char in ["[", "]", "(", ")", "%", "{"]):
             continue
 
         # Nur Entities mit Großbuchstaben am Anfang
@@ -150,12 +158,25 @@ def extract_entities(
         # Filtere zu generische Wörter und Tech-Begriffe
         generic_terms = [
             # Deutsch
-            'intensiv', 'staaten', 'kommission',
-            'ki', 'al', 'black box', 'ki-systemen',
-            'ai-alignment', 'ki-ausrichtung', 'sprachzeichen',
-            'gpt-3', 'ki-verordnung',
+            "intensiv",
+            "staaten",
+            "kommission",
+            "ki",
+            "al",
+            "black box",
+            "ki-systemen",
+            "ai-alignment",
+            "ki-ausrichtung",
+            "sprachzeichen",
+            "gpt-3",
+            "ki-verordnung",
             # English
-            'cpu', 'gui', 'ram', 'usb', 'api', 'os',
+            "cpu",
+            "gui",
+            "ram",
+            "usb",
+            "api",
+            "os",
         ]
         if entity_text.lower() in generic_terms:
             continue
@@ -175,7 +196,7 @@ def process_chunks(
     nodes: list[dict[str, Any]],
     source_text: str,
     nlp: spacy.Language,
-    min_occurrences: int = 2
+    min_occurrences: int = 2,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, list[str]]]:
     """Verarbeitet alle Chunks und extrahiert Entities.
 
@@ -183,12 +204,9 @@ def process_chunks(
         entities_dict: {entity_id: {text, type, count, chunks}}
         chunk_to_entities_map: {chunk_id: [entity_ids]}
     """
-    entities = defaultdict(lambda: {
-        "text": "",
-        "type": "",
-        "count": 0,
-        "chunks": set()
-    })
+    entities = defaultdict(
+        lambda: {"text": "", "type": "", "count": 0, "chunks": set()}
+    )
 
     chunk_to_entities = defaultdict(list)
 
@@ -226,8 +244,7 @@ def process_chunks(
 
     # Filtere Entities nach Mindest-Vorkommen
     filtered_entities = {
-        eid: data for eid, data in entities.items()
-        if data["count"] >= min_occurrences
+        eid: data for eid, data in entities.items() if data["count"] >= min_occurrences
     }
 
     # Aktualisiere Chunk-Mappings
@@ -240,9 +257,7 @@ def process_chunks(
     return filtered_entities, filtered_chunk_to_entities
 
 
-def create_entity_nodes(
-    entities: dict[str, dict[str, Any]]
-) -> list[dict[str, Any]]:
+def create_entity_nodes(entities: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Erstellt Entity-Nodes."""
     nodes = []
 
@@ -265,7 +280,7 @@ def create_entity_nodes(
 
 
 def create_entity_edges(
-    chunk_to_entities: dict[str, list[str]]
+    chunk_to_entities: dict[str, list[str]],
 ) -> list[dict[str, Any]]:
     """Erstellt Edges von Chunks zu Entities."""
     edges = []
@@ -284,8 +299,7 @@ def create_entity_edges(
 
 
 def print_statistics(
-    entities: dict[str, dict[str, Any]],
-    chunk_to_entities: dict[str, list[str]]
+    entities: dict[str, dict[str, Any]], chunk_to_entities: dict[str, list[str]]
 ):
     """Gibt Statistiken aus."""
     # Entity-Typen
@@ -300,11 +314,9 @@ def print_statistics(
 
     # Top Entities
     print(f"\nTop 10 entities by occurrence:", file=sys.stderr)
-    top_entities = sorted(
-        entities.items(),
-        key=lambda x: x[1]["count"],
-        reverse=True
-    )[:10]
+    top_entities = sorted(entities.items(), key=lambda x: x[1]["count"], reverse=True)[
+        :10
+    ]
 
     for entity_id, data in top_entities:
         print(f"  {data['text']} ({data['type']}): {data['count']}x", file=sys.stderr)
@@ -313,21 +325,40 @@ def print_statistics(
 def main():
     start = time.perf_counter()
     parser = argparse.ArgumentParser(description="Extract named entities from chunks")
-    parser.add_argument("-i", "--input", type=Path, required=True, help="Source Markdown file")
-    parser.add_argument("--base-dir", type=Path, default=Path(".brain_graph/data"),
-                        help="Base data directory")
-    parser.add_argument("-l", "--lang", default=None, choices=["de", "en"],
-                        help="Language for spaCy model (auto-detected if not specified)")
-    parser.add_argument("--min-occurrences", type=int, default=4,
-                        help="Minimum occurrences for entity to be included")
+    parser.add_argument(
+        "-i", "--input", type=Path, required=True, help="Source Markdown file"
+    )
+    parser.add_argument(
+        "--base-dir",
+        type=Path,
+        default=Path(".brain_graph/data"),
+        help="Base data directory",
+    )
+    parser.add_argument(
+        "-l",
+        "--lang",
+        default=None,
+        choices=["de", "en"],
+        help="Language for spaCy model (auto-detected if not specified)",
+    )
+    parser.add_argument(
+        "--min-occurrences",
+        type=int,
+        default=4,
+        help="Minimum occurrences for entity to be included",
+    )
     parser.add_argument(
         "--format",
         choices=["json", "text"],
         default="json",
         help="Output format (default: json)",
     )
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
-    parser.add_argument("--debug", action="store_true", help="Include traceback in JSON error output")
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON output"
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="Include traceback in JSON error output"
+    )
     args = parser.parse_args()
 
     try:
@@ -342,12 +373,14 @@ def main():
         # Pfade ermitteln
         output_paths = get_output_paths(args.input, doc_ulid, args.base_dir)
 
-        if not output_paths['nodes'].exists():
-            raise FileNotFoundError(f"Nodes file not found: {output_paths['nodes']} (run chunker.py first)")
+        if not output_paths["nodes"].exists():
+            raise FileNotFoundError(
+                f"Nodes file not found: {output_paths['nodes']} (run chunker.py first)"
+            )
 
         # Lade Daten
         print("Loading nodes and source...", file=sys.stderr)
-        nodes = json.loads(output_paths['nodes'].read_text(encoding="utf-8"))
+        nodes = json.loads(output_paths["nodes"].read_text(encoding="utf-8"))
         source_text = args.input.read_text(encoding="utf-8")
 
         # Auto-detect Sprache falls nicht angegeben
@@ -366,10 +399,7 @@ def main():
         # Extrahiere Entities
         print("Extracting entities...", file=sys.stderr)
         entities, chunk_to_entities = process_chunks(
-            nodes,
-            source_text,
-            nlp,
-            args.min_occurrences
+            nodes, source_text, nlp, args.min_occurrences
         )
 
         # Statistiken
@@ -383,30 +413,31 @@ def main():
         print(f"Created {len(entity_edges)} entity edges", file=sys.stderr)
 
         # NER-Verzeichnisse erstellen
-        output_paths['ner_nodes'].parent.mkdir(parents=True, exist_ok=True)
-        output_paths['ner_edges'].parent.mkdir(parents=True, exist_ok=True)
+        output_paths["ner_nodes"].parent.mkdir(parents=True, exist_ok=True)
+        output_paths["ner_edges"].parent.mkdir(parents=True, exist_ok=True)
 
         # NER-Files schreiben
-        output_paths['ner_nodes'].write_text(
-            json.dumps(entity_nodes, ensure_ascii=False, indent=2),
-            encoding="utf-8"
+        output_paths["ner_nodes"].write_text(
+            json.dumps(entity_nodes, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        output_paths['ner_edges'].write_text(
-            json.dumps(entity_edges, ensure_ascii=False, indent=2),
-            encoding="utf-8"
+        output_paths["ner_edges"].write_text(
+            json.dumps(entity_edges, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
         print(f"\nWritten {output_paths['ner_nodes']}", file=sys.stderr)
         print(f"Written {output_paths['ner_edges']}", file=sys.stderr)
 
         # Update meta.json
-        update_meta(output_paths['meta'], {
-            "step": "ner_extraction",
-            "entity_count": len(entity_nodes),
-            "edge_count": len(entity_edges),
-            "language": lang,
-            "min_occurrences": args.min_occurrences,
-        })
+        update_meta(
+            output_paths["meta"],
+            {
+                "step": "ner_extraction",
+                "entity_count": len(entity_nodes),
+                "edge_count": len(entity_edges),
+                "language": lang,
+                "min_occurrences": args.min_occurrences,
+            },
+        )
         print(f"Updated {output_paths['meta']}", file=sys.stderr)
 
         result = ok_result(
@@ -418,7 +449,11 @@ def main():
                 "ner_edges": str(output_paths["ner_edges"]),
                 "meta": str(output_paths["meta"]),
             },
-            counts={"entities": len(entity_nodes), "edges": len(entity_edges), "chunks": chunk_count},
+            counts={
+                "entities": len(entity_nodes),
+                "edges": len(entity_edges),
+                "chunks": chunk_count,
+            },
             language=lang,
             min_occurrences=args.min_occurrences,
             duration_ms=ms_since(start),
@@ -428,7 +463,15 @@ def main():
         return 0
     except Exception as e:
         if args.format == "json":
-            emit_json(error_result("ner_extractor", e, include_traceback=args.debug, duration_ms=ms_since(start)), pretty=args.pretty)
+            emit_json(
+                error_result(
+                    "ner_extractor",
+                    e,
+                    include_traceback=args.debug,
+                    duration_ms=ms_since(start),
+                ),
+                pretty=args.pretty,
+            )
             return 1
         raise
 

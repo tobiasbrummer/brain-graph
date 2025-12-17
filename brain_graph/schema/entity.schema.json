@@ -17,8 +17,42 @@
     },
     "entity_type": {
       "type": "string",
-      "enum": ["PER", "LOC", "ORG", "MISC"],
-      "description": "Named entity type (spaCy NER categories)"
+      "enum": [
+        "PER",
+        "LOC",
+        "ORG",
+        "MISC",
+        "AGENT"
+      ],
+      "description": "Named entity type (spaCy NER categories) or AGENT"
+    },
+    "agent_profile": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "inactive"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Configuration for AGENT entities"
     },
     "title": {
       "type": "string",
@@ -39,6 +73,13 @@
       "description": "Chunk IDs where entity is mentioned"
     }
   },
-  "required": ["id", "ulid", "entity_type", "title", "occurrences", "mentioned_in"],
+  "required": [
+    "id",
+    "ulid",
+    "entity_type",
+    "title",
+    "occurrences",
+    "mentioned_in"
+  ],
   "additionalProperties": false
 }

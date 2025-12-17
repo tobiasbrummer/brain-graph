@@ -1,4 +1,5 @@
 """Agent subcommands for brain CLI."""
+
 from __future__ import annotations
 
 import argparse
@@ -17,12 +18,25 @@ def cmd_agent_docs(args: argparse.Namespace) -> int:
 
     python_exe = (os.environ.get("BG_PYTHON") or "").strip() or sys.executable
     cmd = [python_exe, str(script), args.tool]
-    
+
     if args.format:
         cmd.extend(["--format", args.format])
-    
+
     result = subprocess.run(cmd)
     return result.returncode
+
+
+def cmd_agent_reflex(args: argparse.Namespace) -> int:
+    """Run the reflex engine manually."""
+    from brain_graph.agents.reflex import ReflexEngine
+
+    try:
+        engine = ReflexEngine(REPO_ROOT)
+        engine.run()
+        return 0
+    except Exception as e:
+        print(f"Reflex error: {e}", file=sys.stderr)
+        return 1
 
 
 def setup_agent_parser(subparsers) -> None:
@@ -32,10 +46,12 @@ def setup_agent_parser(subparsers) -> None:
         help="Agent-facing commands",
         description="Commands designed for LLM agent consumption",
     )
-    
-    agent_subparsers = agent_parser.add_subparsers(dest="agent_command", help="Agent commands")
+
+    agent_subparsers = agent_parser.add_subparsers(
+        dest="agent_command", help="Agent commands"
+    )
     agent_subparsers.required = True
-    
+
     # docs subcommand
     docs_parser = agent_subparsers.add_parser(
         "docs",
@@ -52,3 +68,10 @@ def setup_agent_parser(subparsers) -> None:
         help="Output format",
     )
     docs_parser.set_defaults(func=cmd_agent_docs)
+
+    # reflex subcommand
+    reflex_parser = agent_subparsers.add_parser(
+        "reflex",
+        help="Run the reflex engine (tool execution)",
+    )
+    reflex_parser.set_defaults(func=cmd_agent_reflex)
