@@ -153,6 +153,19 @@ class BrainGraphDB:
         """
         )
 
+        # Code embeddings (256d)
+        self.con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS code_embeddings_256d (
+                code_id VARCHAR PRIMARY KEY,
+                code_local_id VARCHAR,
+                embedding FLOAT[256],
+                source_file VARCHAR,
+                language VARCHAR
+            );
+        """
+        )
+
         # Taxonomy embeddings (256d)
         self.con.execute(
             """
@@ -483,6 +496,59 @@ class BrainGraphDB:
                 """
             )
 
+        # Code embeddings (256d): map code_idx (local code ID) -> code ulid, include source_file and language
+        code_emb_glob = f"{data_dir.as_posix()}/embeddings/**/*.code.parquet"
+        has_code_embeddings = bool(list(data_dir.glob("embeddings/**/*.code.parquet")))
+
+        if has_code_embeddings:
+            self.con.execute(
+                f"""
+                CREATE OR REPLACE TABLE code_embeddings_256d AS
+                WITH
+                code_map AS (
+                    SELECT
+                        d.file_base,
+                        d.source_file,
+                        code.id::VARCHAR AS code_local_id,
+                        code.ulid::VARCHAR AS code_ulid,
+                        code.language::VARCHAR AS language
+                    FROM documents d, UNNEST(d.nodes.codes) AS c(code)
+                    WHERE code.type IN ('function', 'class', 'method')
+                ),
+                emb_raw AS (
+                    SELECT
+                        regexp_extract(filename, '([^/]+)[.]code[.]parquet$', 1) AS file_base,
+                        code_idx::VARCHAR AS code_local_id,
+                        embedding AS embedding,
+                        filename AS parquet_path
+                    FROM read_parquet('{_sql_quote(code_emb_glob)}', filename=true)
+                )
+                SELECT
+                    cm.code_ulid AS code_id,
+                    cm.code_local_id AS code_local_id,
+                    CAST(emb_raw.embedding[1:{target_dim}] AS FLOAT[{target_dim}]) AS embedding,
+                    cm.source_file AS source_file,
+                    cm.language AS language
+                FROM emb_raw
+                JOIN code_map cm
+                  ON cm.file_base = emb_raw.file_base
+                 AND cm.code_local_id = emb_raw.code_local_id;
+                """
+            )
+        else:
+            self.con.execute(
+                f"""
+                CREATE OR REPLACE TABLE code_embeddings_256d AS
+                SELECT
+                    NULL::VARCHAR AS code_id,
+                    NULL::VARCHAR AS code_local_id,
+                    NULL::FLOAT[{target_dim}] AS embedding,
+                    NULL::VARCHAR AS source_file,
+                    NULL::VARCHAR AS language
+                WHERE FALSE;
+                """
+            )
+
         # Document links/backlinks (derived from forward links).
         #
         # Note: This does not write back into *.document.json files; it only creates DB tables
@@ -736,6 +802,30 @@ class BrainGraphDB:
                 f"    Warning: Could not build taxonomy HNSW index, skipping ({e})",
                 file=sys.stderr,
             )
+
+        # Code HNSW index
+        code_count = self.con.execute(
+            "SELECT COUNT(*) FROM code_embeddings_256d"
+        ).fetchone()[0]
+        if code_count > 0:
+            print(f"  Code HNSW index for {code_count} code units...", file=sys.stderr)
+            start = time.time()
+            try:
+                self.con.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_code_embeddings_hnsw
+                    ON code_embeddings_256d
+                    USING HNSW (embedding)
+                    WITH (metric = 'cosine')
+                    """
+                )
+                elapsed = time.time() - start
+                print(f"    Code HNSW index built in {elapsed:.1f}s", file=sys.stderr)
+            except duckdb.Error as e:
+                print(
+                    f"    Warning: Could not build code HNSW index, skipping ({e})",
+                    file=sys.stderr,
+                )
 
         print("  B-tree indexes...", file=sys.stderr)
         self.con.execute("CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type)")
