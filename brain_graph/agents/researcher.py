@@ -134,6 +134,7 @@ Return JSON with:
         """Main execution method."""
         review_dir = Path("review")
         pending = self.find_pending_hypotheses(review_dir)
+        if not pending:
             print("Researcher: No pending hypotheses found.", file=sys.stderr)
             return
 

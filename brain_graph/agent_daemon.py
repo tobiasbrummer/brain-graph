@@ -11,6 +11,7 @@ from brain_graph.agents.dreamer import DreamerAgent
 from brain_graph.agents.researcher import ResearcherAgent
 from brain_graph.agents.gardener import GardenerAgent
 from brain_graph.agents.reflex import ReflexEngine
+from brain_graph.agents.archivist import ArchivistAgent
 from brain_graph.utils.file_utils import load_config
 
 
@@ -50,6 +51,15 @@ def run_reflex(config):
         print(f"Reflex failed: {e}", file=sys.stderr)
 
 
+def run_archivist(config):
+    print("Running Archivist...", file=sys.stderr)
+    try:
+        agent = ArchivistAgent(config)
+        agent.run()
+    except Exception as e:
+        print(f"Archivist failed: {e}", file=sys.stderr)
+
+
 def main():
     print("Starting Agent Daemon...", file=sys.stderr)
     config = load_config()
@@ -80,8 +90,10 @@ def main():
 
     # Archivist (New)
     if config.get("agents_archivist_schedule") == "daily_0200":
-        # schedule.every().day.at("02:00").do(run_archivist, config)
-        pass
+        schedule.every().day.at("02:00").do(run_archivist, config)
+    else:
+        # Default fallback
+        schedule.every().day.at("02:00").do(run_archivist, config)
 
     print("Scheduler running. Press Ctrl+C to exit.", file=sys.stderr)
 

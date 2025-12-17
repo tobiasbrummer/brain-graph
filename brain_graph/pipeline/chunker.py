@@ -134,13 +134,13 @@ def load_config(config_path: Path | None = None) -> dict[str, Any]:
 
 def _ulid_timestamp_bytes(ulid_str: str) -> bytes:
     """Return the 6 timestamp bytes from a ULID string."""
-    return ulid.from_str(ulid_str).bytes[:6]
+    return ulid.ULID.from_str(ulid_str).bytes[:6]
 
 
 def make_ulid(seed: str, *, ts_bytes: bytes) -> str:
     """Deterministische ULID aus Seed + Timestamp-Bytes (ULID time-part)."""
     digest = hashlib.sha1(seed.encode("utf-8")).digest()
-    return str(ulid.from_bytes(ts_bytes + digest[:10]))
+    return str(ulid.ULID.from_bytes(ts_bytes + digest[:10]))
 
 
 # -----------------------------------------------------------------------------
