@@ -42,6 +42,8 @@ try:
     TREE_SITTER_AVAILABLE = True
 except ImportError:
     TREE_SITTER_AVAILABLE = False
+    Parser = Any
+    TSNode = Any
     print(
         "Warning: tree-sitter not available. Code parsing will be limited.",
         file=sys.stderr,
@@ -1076,11 +1078,28 @@ def build_graph(
             author_match = re.search(r"\+author:(&[a-zA-Z0-9_]+)", block.content)
             if author_match:
                 agent_name = author_match.group(1)
-                # We will add this edge to ALL chunks generated from this block
-                # Or better: add it to the document meta?
-                # Requirement says: "Jedes Dokument zeigt transparent, wer es erstellt hat."
-                # -> Edge `authored_by` from Document/Chunk to Agent Entity.
-                pass
+                # Create edge from Document to Agent
+                # We use the same ID generation as ner_extractor to ensure consistency
+                # ner_extractor uses sha1 and lowercased content
+                agent_content = agent_name.lower()
+                agent_hash = hashlib.sha1(agent_content.encode()).hexdigest()[:8]
+                agent_id = f"entity_{agent_hash}"
+
+                # Avoid duplicate edges
+                edge_exists = False
+                for e in edges:
+                    if (
+                        e.from_id == doc_ulid
+                        and e.to_id == agent_id
+                        and e.type == "authored_by"
+                    ):
+                        edge_exists = True
+                        break
+
+                if not edge_exists:
+                    edges.append(
+                        Edge(from_id=doc_ulid, to_id=agent_id, type="authored_by")
+                    )
 
             # Text → Sätze → Chunks
             # Erkenne Sprache für diesen Block

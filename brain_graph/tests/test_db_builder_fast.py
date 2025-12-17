@@ -95,7 +95,15 @@ def test_db_builder_fast_import_creates_core_tables(tmp_path: Path) -> None:
         ],
         "links": [],
         "backlinks": [],
-        "processing": {"steps": [{"step": "chunking", "completed": True, "timestamp": "2025-01-01T00:00:00+00:00"}]},
+        "processing": {
+            "steps": [
+                {
+                    "step": "chunking",
+                    "completed": True,
+                    "timestamp": "2025-01-01T00:00:00+00:00",
+                }
+            ]
+        },
     }
     doc_path.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
 
@@ -107,20 +115,28 @@ def test_db_builder_fast_import_creates_core_tables(tmp_path: Path) -> None:
     )
 
     db = BrainGraphDB(":memory:")
-    db.import_directory_fast(data_dir)
+    db.import_directory(data_dir)
 
     # Filter to this document only (taxonomy import may add additional nodes/edges).
-    assert db.con.execute(
-        "SELECT COUNT(*) FROM nodes WHERE source_file = ?",
-        [doc["path"]],
-    ).fetchone()[0] == 3
-    assert db.con.execute(
-        "SELECT COUNT(*) FROM edges WHERE source_file = ?",
-        [doc["path"]],
-    ).fetchone()[0] == 2
+    assert (
+        db.con.execute(
+            "SELECT COUNT(*) FROM nodes WHERE source_file = ?",
+            [doc["path"]],
+        ).fetchone()[0]
+        == 3
+    )
+    assert (
+        db.con.execute(
+            "SELECT COUNT(*) FROM edges WHERE source_file = ?",
+            [doc["path"]],
+        ).fetchone()[0]
+        == 2
+    )
     assert db.con.execute("SELECT COUNT(*) FROM meta").fetchone()[0] == 1
     assert db.con.execute("SELECT COUNT(*) FROM embedding_sources").fetchone()[0] == 1
-    assert db.con.execute("SELECT COUNT(*) FROM chunk_embeddings_256d").fetchone()[0] == 1
+    assert (
+        db.con.execute("SELECT COUNT(*) FROM chunk_embeddings_256d").fetchone()[0] == 1
+    )
     assert db.con.execute("SELECT COUNT(*) FROM doc_links").fetchone()[0] == 0
     assert db.con.execute("SELECT COUNT(*) FROM doc_backlinks").fetchone()[0] == 0
 
@@ -162,7 +178,15 @@ def test_db_builder_fast_import_builds_doc_links_and_backlinks(tmp_path: Path) -
         "nodes": {"sections": [], "chunks": [], "entities": []},
         "edges": [],
         "backlinks": [],
-        "processing": {"steps": [{"step": "chunking", "completed": True, "timestamp": "2025-01-01T00:00:00+00:00"}]},
+        "processing": {
+            "steps": [
+                {
+                    "step": "chunking",
+                    "completed": True,
+                    "timestamp": "2025-01-01T00:00:00+00:00",
+                }
+            ]
+        },
     }
 
     (docs_dir / f"{base_a}.document.json").write_text(
@@ -175,7 +199,13 @@ def test_db_builder_fast_import_builds_doc_links_and_backlinks(tmp_path: Path) -
                 "title": "A",
                 "full_text": f"# A\n+id:{doc_a}\n\nSee +link:{doc_b}\n",
                 "links": [
-                    {"type": "link", "target_id": doc_b, "source_node": None, "context": "See +link", "char_offset": 0}
+                    {
+                        "type": "link",
+                        "target_id": doc_b,
+                        "source_node": None,
+                        "context": "See +link",
+                        "char_offset": 0,
+                    }
                 ],
             },
             ensure_ascii=False,
@@ -192,7 +222,13 @@ def test_db_builder_fast_import_builds_doc_links_and_backlinks(tmp_path: Path) -
                 "title": "B",
                 "full_text": f"# B\n+id:{doc_b}\n\nSee +link:{doc_a}\n",
                 "links": [
-                    {"type": "link", "target_id": doc_a, "source_node": None, "context": "See +link", "char_offset": 0}
+                    {
+                        "type": "link",
+                        "target_id": doc_a,
+                        "source_node": None,
+                        "context": "See +link",
+                        "char_offset": 0,
+                    }
                 ],
             },
             ensure_ascii=False,
@@ -201,13 +237,17 @@ def test_db_builder_fast_import_builds_doc_links_and_backlinks(tmp_path: Path) -
     )
 
     db = BrainGraphDB(":memory:")
-    db.import_directory_fast(data_dir)
+    db.import_directory(data_dir)
 
     assert db.con.execute("SELECT COUNT(*) FROM doc_links").fetchone()[0] == 2
     assert db.con.execute("SELECT COUNT(*) FROM doc_backlinks").fetchone()[0] == 2
 
-    links = set(db.con.execute("SELECT source_doc_id, target_doc_id FROM doc_links").fetchall())
+    links = set(
+        db.con.execute("SELECT source_doc_id, target_doc_id FROM doc_links").fetchall()
+    )
     assert links == {(doc_a, doc_b), (doc_b, doc_a)}
 
-    backlinks = set(db.con.execute("SELECT doc_id, source_doc_id FROM doc_backlinks").fetchall())
+    backlinks = set(
+        db.con.execute("SELECT doc_id, source_doc_id FROM doc_backlinks").fetchall()
+    )
     assert backlinks == {(doc_a, doc_b), (doc_b, doc_a)}

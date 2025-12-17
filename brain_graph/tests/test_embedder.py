@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from brain_graph.pipeline.embedder import extract_text_ranges, filter_oversized_texts, normalize_markdown
+from brain_graph.pipeline.embedder import (
+    extract_text_ranges,
+    filter_oversized_texts,
+    normalize_markdown,
+)
 
 
 def test_normalize_markdown_removes_links_formatting_and_ulid() -> None:
@@ -32,7 +36,7 @@ def test_extract_text_ranges_adds_section_context(tmp_path: Path) -> None:
         {"id": "sec_1", "type": "section", "title": "Section", "level": 2},
         {"id": "chunk_1", "type": "chunk", "char_start": start, "char_end": end},
     ]
-    edges = [{"type": "contains", "from": "sec_1", "to": "chunk_1"}]
+    edges = [{"type": "contains", "from_id": "sec_1", "to_id": "chunk_1"}]
 
     texts, chunk_ids = extract_text_ranges(md, nodes, edges)
     assert chunk_ids == ["chunk_1"]
@@ -46,7 +50,9 @@ def test_filter_oversized_texts_skips_large_items() -> None:
     texts = ["short", "x" * (8000 * 4 + 1)]
     ids = ["a", "b"]
 
-    filtered_texts, filtered_ids, skipped = filter_oversized_texts(texts, ids, max_tokens=8000)
+    filtered_texts, filtered_ids, skipped = filter_oversized_texts(
+        texts, ids, max_tokens=8000
+    )
     assert filtered_texts == ["short"]
     assert filtered_ids == ["a"]
     assert skipped == [1]
