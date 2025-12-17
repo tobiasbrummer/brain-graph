@@ -5,6 +5,7 @@ Researcher Agent: Validates hypotheses using external search.
 import os
 import sys
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any, Optional
 
@@ -129,6 +130,36 @@ Return JSON with:
         print(
             f"Researcher: Updated {file_path} ({result.get('status')})", file=sys.stderr
         )
+
+        # Archive to vault/hypotheses
+        self.archive_hypothesis(file_path, result)
+
+    def archive_hypothesis(self, file_path: Path, result: dict[str, Any]):
+        """Move processed hypothesis to vault/hypotheses/ and update index."""
+        hypotheses_dir = Path("vault/hypotheses")
+        hypotheses_dir.mkdir(parents=True, exist_ok=True)
+
+        new_path = hypotheses_dir / file_path.name
+        file_path.rename(new_path)
+
+        # Update Index
+        index_file = hypotheses_dir / "INDEX.md"
+        if not index_file.exists():
+            index_file.write_text(
+                "# Hypothesen Index\n\n| Datum | Status | Titel | Link |\n|---|---|---|---|\n",
+                encoding="utf-8",
+            )
+
+        # Extract title
+        content = new_path.read_text(encoding="utf-8")
+        title_line = content.splitlines()[0].replace("# ", "").strip()
+        date_str = date.today().isoformat()
+        status = result.get("status", "unknown")
+
+        with index_file.open("a", encoding="utf-8") as f:
+            f.write(f"| {date_str} | {status} | {title_line} | [[{new_path.name}]] |\n")
+
+        print(f"Researcher: Archived to {new_path} and updated index.", file=sys.stderr)
 
     def run(self):
         """Main execution method."""

@@ -203,7 +203,9 @@ class BrainGraphDB:
                 modified_at TIMESTAMP,
                 uses INTEGER,
                 importance DOUBLE,
-                decay DOUBLE
+                decay DOUBLE,
+                doc_type VARCHAR,
+                research_status VARCHAR
             );
         """
         )
@@ -283,6 +285,8 @@ class BrainGraphDB:
                 id::VARCHAR AS doc_id,
                 path::VARCHAR AS source_file,
                 language::VARCHAR AS language,
+                doc_type::VARCHAR AS doc_type,
+                research_status::VARCHAR AS research_status,
                 file_hash::VARCHAR AS source_hash,
                 source_commit::VARCHAR AS source_commit,
                 source_commit_date::VARCHAR AS source_commit_date,
@@ -435,7 +439,9 @@ class BrainGraphDB:
                 try_cast(updated AS TIMESTAMP) AS modified_at,
                 uses::INTEGER AS uses,
                 importance::DOUBLE AS importance,
-                decay::DOUBLE AS decay
+                decay::DOUBLE AS decay,
+                doc_type::VARCHAR AS doc_type,
+                research_status::VARCHAR AS research_status
             FROM documents;
             """
         )

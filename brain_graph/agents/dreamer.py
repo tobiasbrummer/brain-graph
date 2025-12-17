@@ -101,25 +101,49 @@ class DreamerAgent:
                         [chunk_id, other_id, other_id, chunk_id],
                     ).fetchone()
 
-                    if not connected:
-                        # Found a latent bridge!
-                        candidates.append(
-                            {
-                                "source": {
-                                    "id": chunk_id,
-                                    "text": text,
-                                    "file": source_file,
-                                },
-                                "target": {
-                                    "id": other_id,
-                                    "text": other_text,
-                                    "file": other_source,
-                                },
-                                "similarity": sim,
-                            }
-                        )
-                        if len(candidates) >= limit:
-                            return candidates
+                    if connected:
+                        continue
+
+                    # Check for rejected hypothesis
+                    # We look for a hypothesis document that links to both source files
+                    rejected = con.execute(
+                        """
+                        SELECT 1
+                        FROM meta m
+                        JOIN doc_links l1 ON m.ulid = l1.source_doc_id
+                        JOIN doc_links l2 ON m.ulid = l2.source_doc_id
+                        JOIN meta m1 ON l1.target_doc_id = m1.ulid
+                        JOIN meta m2 ON l2.target_doc_id = m2.ulid
+                        WHERE m.doc_type = 'hypothesis'
+                          AND m.research_status = 'rejected'
+                          AND m1.source_file = ?
+                          AND m2.source_file = ?
+                        """,
+                        [source_file, other_source],
+                    ).fetchone()
+
+                    if rejected:
+                        # print(f"Dreamer: Skipping rejected hypothesis between {source_file} and {other_source}", file=sys.stderr)
+                        continue
+
+                    # Found a latent bridge!
+                    candidates.append(
+                        {
+                            "source": {
+                                "id": chunk_id,
+                                "text": text,
+                                "file": source_file,
+                            },
+                            "target": {
+                                "id": other_id,
+                                "text": other_text,
+                                "file": other_source,
+                            },
+                            "similarity": sim,
+                        }
+                    )
+                    if len(candidates) >= limit:
+                        return candidates
 
             return candidates
         finally:
