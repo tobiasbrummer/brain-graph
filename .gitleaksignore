@@ -1,0 +1,4 @@
+# Reviewed false positive: expired Academia.edu CDN signed-URL embedded in
+# a reference link inside a sample Wikipedia article (inbox/Klimawandel.md).
+# Not a project credential.
+a0b4c6038045770b6c499b134f6db4384eae40f1:inbox/Klimawandel.md:generic-api-key:440
