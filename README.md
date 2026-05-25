@@ -9,6 +9,25 @@ pip install -e .
 pip install -e ".[dev]"  # pytest/ruff/black
 ```
 
+### External services
+
+End-to-end `brain db build` (chunking, embedding, taxonomy, summarisation)
+expects two services running locally:
+
+- **Ollama** on `http://localhost:11434` -- provides the embedding model
+  (`jina/jina-embeddings-v3:latest` by default) and the chat model
+  (`qwen2.5:14b` by default). Install via
+  [ollama.com/download](https://ollama.com/download), then
+  `ollama pull jina/jina-embeddings-v3 && ollama pull qwen2.5:14b`.
+- **(Optional) DuckPGQ extension** for the graph queries -- the repo
+  ships a vendored extension binary under `brain_graph/lib/duckpgq/`
+  that loads automatically. It is compiled for **DuckDB 1.4.3 exactly**;
+  the `pyproject.toml` pins `duckdb==1.4.3` to enforce that.
+
+Without Ollama, `brain search` works against an already-built database
+but `brain db build` will fail at the embedding step. Override the
+default model names via the config (`brain config` for the path).
+
 ## Usage
 
 ### Search
